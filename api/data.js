@@ -92,31 +92,85 @@ async function fetchSheetData() {
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
   const tabs = meta.data.sheets.map(s => s.properties.title);
 
-  // Find the right tabs by name (case-insensitive)
-  const incomeTab =
-    tabs.find(t => /income\s*summary/i.test(t)) ||
-    tabs.find(t => /^p\s*&\s*l$/i.test(t)) ||
-    tabs.find(t => /profit.*loss/i.test(t));
-  const txnTab = tabs.find(t => /transaction/i.test(t));
+  // ── Auto-detect P&L tab by structure (resilient to renames) ─────
+  // We're looking for a tab that has:
+  //   (a) a row with month headers (Mmm YYYY) in the first ~40 rows
+  //   (b) a row whose column A is "Total Revenue" or "TOTAL COST OF SALES" or "OPERATING INCOME"
+  // We prioritize likely candidate names but fall back to scanning all tabs.
+  const PL_CANDIDATES = [
+    /income\s*summary/i, /^p\s*&\s*l$/i, /profit.*loss/i,
+    /^finance\s*model$/i, /^finance\s*model2$/i,
+    /scorecard/i, /profit.*matrix/i, /^metrics$/i, /^budget$/i
+  ];
+  const TXN_CANDIDATES = [/transaction.*database/i, /^transactions$/i, /transaction/i];
 
-  if (!incomeTab) throw new Error(`Could not find Income Summary / P&L tab. Available tabs: ${tabs.join(', ')}`);
-
-  // Read Income Summary
-  const incomeRes = await sheets.spreadsheets.values.get({
-    spreadsheetId: SHEET_ID,
-    range: `'${incomeTab}'!A1:Z500`,
-    valueRenderOption: 'UNFORMATTED_VALUE'
-  });
-  const incomeRows = incomeRes.data.values || [];
-
-  // Find the header row (contains month names)
-  let headerRowIdx = -1;
-  for (let i = 0; i < Math.min(incomeRows.length, 40); i++) {
-    const row = incomeRows[i] || [];
-    const monthHits = row.filter(c => /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}$/.test(String(c || '').trim())).length;
-    if (monthHits >= 6) { headerRowIdx = i; break; }
+  // Build prioritized scan order: candidate-matching tabs first, then everything else
+  function orderByCandidates(tabList, patterns) {
+    const matched = [];
+    const seen = new Set();
+    for (const pat of patterns) {
+      for (const t of tabList) {
+        if (!seen.has(t) && pat.test(t)) {
+          matched.push(t);
+          seen.add(t);
+        }
+      }
+    }
+    for (const t of tabList) {
+      if (!seen.has(t)) matched.push(t);
+    }
+    return matched;
   }
-  if (headerRowIdx < 0) throw new Error('Income Summary: could not locate header row with month columns');
+  const plScanOrder = orderByCandidates(tabs, PL_CANDIDATES);
+  const txnScanOrder = orderByCandidates(tabs, TXN_CANDIDATES);
+
+  // Helper: scan one tab and return { rows, headerRowIdx, monthCols } if it looks like a P&L
+  async function tryReadPLTab(tabName) {
+    let res;
+    try {
+      res = await sheets.spreadsheets.values.get({
+        spreadsheetId: SHEET_ID,
+        range: `'${tabName}'!A1:Z500`,
+        valueRenderOption: 'UNFORMATTED_VALUE'
+      });
+    } catch (e) {
+      return null;
+    }
+    const rows = res.data.values || [];
+    if (rows.length < 5) return null;
+
+    // Find header row with month columns
+    let headerIdx = -1;
+    for (let i = 0; i < Math.min(rows.length, 40); i++) {
+      const row = rows[i] || [];
+      const monthHits = row.filter(c => /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}$/.test(String(c || '').trim())).length;
+      if (monthHits >= 6) { headerIdx = i; break; }
+    }
+    if (headerIdx < 0) return null;
+
+    // Confirm P&L structure: must have at least one of the canonical labels in column A
+    const canonicalLabels = ['total revenue', 'total cost of sales', 'operating income', 'total operating expenses', 'gross profit'];
+    const hasPLLabel = rows.some(r => r && canonicalLabels.includes(String(r[0] || '').toLowerCase().trim()));
+    if (!hasPLLabel) return null;
+
+    return { tabName, rows, headerRowIdx: headerIdx };
+  }
+
+  // Scan tabs in priority order, return first match
+  let incomeData = null;
+  for (const t of plScanOrder) {
+    incomeData = await tryReadPLTab(t);
+    if (incomeData) break;
+  }
+  if (!incomeData) {
+    throw new Error(`Could not auto-detect P&L tab. Scanned ${plScanOrder.length} tabs. Available: ${tabs.join(', ')}`);
+  }
+  const incomeTab    = incomeData.tabName;
+  const incomeRows   = incomeData.rows;
+  const headerRowIdx = incomeData.headerRowIdx;
+
+  // Find Transactions tab (still by name match — easier since "Transactions Database" is distinctive)
+  const txnTab = txnScanOrder.find(t => TXN_CANDIDATES.some(pat => pat.test(t)));
 
   const headerRow = incomeRows[headerRowIdx];
   const monthCols = []; // { colIdx, shortLabel, fullLabel }
