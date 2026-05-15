@@ -16,6 +16,7 @@ const TRAILING_MONTHS = 13;    // dashboard shows last 13 months
 // ── In-memory cache (warm instance) ─────────────────────────────
 let memCache = null;
 let memCacheAt = 0;
+let cachedPLTab = null; // remember which tab is the P&L between invocations
 
 // ── Number / string helpers ─────────────────────────────────────
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -121,55 +122,97 @@ async function fetchSheetData() {
     }
     return matched;
   }
+  // Build prioritized candidate list, limited to top 5 to stay under rate limits
   const plScanOrder = orderByCandidates(tabs, PL_CANDIDATES);
   const txnScanOrder = orderByCandidates(tabs, TXN_CANDIDATES);
 
-  // Helper: scan one tab and return { rows, headerRowIdx, monthCols } if it looks like a P&L
-  async function tryReadPLTab(tabName) {
-    let res;
-    try {
-      res = await sheets.spreadsheets.values.get({
-        spreadsheetId: SHEET_ID,
-        range: `'${tabName}'!A1:Z500`,
-        valueRenderOption: 'UNFORMATTED_VALUE'
-      });
-    } catch (e) {
-      return null;
-    }
-    const rows = res.data.values || [];
-    if (rows.length < 5) return null;
-
-    // Find header row with month columns
+  // Helper to evaluate whether a sheet of rows looks like a P&L
+  function evalPLRows(rows) {
+    if (!rows || rows.length < 5) return -1;
     let headerIdx = -1;
     for (let i = 0; i < Math.min(rows.length, 40); i++) {
       const row = rows[i] || [];
       const monthHits = row.filter(c => /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}$/.test(String(c || '').trim())).length;
       if (monthHits >= 6) { headerIdx = i; break; }
     }
-    if (headerIdx < 0) return null;
-
-    // Confirm P&L structure: must have at least one of the canonical labels in column A
+    if (headerIdx < 0) return -1;
     const canonicalLabels = ['total revenue', 'total cost of sales', 'operating income', 'total operating expenses', 'gross profit'];
     const hasPLLabel = rows.some(r => r && canonicalLabels.includes(String(r[0] || '').toLowerCase().trim()));
-    if (!hasPLLabel) return null;
-
-    return { tabName, rows, headerRowIdx: headerIdx };
+    return hasPLLabel ? headerIdx : -1;
   }
 
-  // Scan tabs in priority order, return first match
-  let incomeData = null;
-  for (const t of plScanOrder) {
-    incomeData = await tryReadPLTab(t);
-    if (incomeData) break;
-  }
-  if (!incomeData) {
-    throw new Error(`Could not auto-detect P&L tab. Scanned ${plScanOrder.length} tabs. Available: ${tabs.join(', ')}`);
-  }
-  const incomeTab    = incomeData.tabName;
-  const incomeRows   = incomeData.rows;
-  const headerRowIdx = incomeData.headerRowIdx;
+  // Determine which tab is the P&L — using single batchGet to avoid rate limits
+  let incomeTab = null;
+  let incomeRows = null;
+  let headerRowIdx = -1;
 
-  // Find Transactions tab (still by name match — easier since "Transactions Database" is distinctive)
+  // 1) Try the cached tab first (1 read) if it's still in the spreadsheet
+  if (cachedPLTab && tabs.includes(cachedPLTab)) {
+    try {
+      const r = await sheets.spreadsheets.values.get({
+        spreadsheetId: SHEET_ID,
+        range: `'${cachedPLTab}'!A1:Z500`,
+        valueRenderOption: 'UNFORMATTED_VALUE'
+      });
+      const rows = r.data.values || [];
+      const hi = evalPLRows(rows);
+      if (hi >= 0) {
+        incomeTab = cachedPLTab;
+        incomeRows = rows;
+        headerRowIdx = hi;
+      } else {
+        cachedPLTab = null; // invalidate stale cache
+      }
+    } catch (e) {
+      cachedPLTab = null;
+    }
+  }
+
+  // 2) Fallback: batchGet the top 5 candidates in ONE API call
+  if (!incomeTab) {
+    const candidates = plScanOrder.slice(0, 5);
+    const ranges = candidates.map(t => `'${t}'!A1:Z120`);
+    let batchRes;
+    try {
+      batchRes = await sheets.spreadsheets.values.batchGet({
+        spreadsheetId: SHEET_ID,
+        ranges,
+        valueRenderOption: 'UNFORMATTED_VALUE'
+      });
+    } catch (e) {
+      throw new Error(`Sheet read failed during P&L tab detection: ${e.message}`);
+    }
+    const ranges_out = batchRes.data.valueRanges || [];
+    for (let i = 0; i < ranges_out.length; i++) {
+      const rows = ranges_out[i].values || [];
+      const hi = evalPLRows(rows);
+      if (hi >= 0) {
+        incomeTab = candidates[i];
+        // If this tab's rows extend beyond 120, fetch the full range; otherwise reuse
+        const needsFullRead = rows.length >= 119; // heuristic: if we hit the limit, refetch
+        if (needsFullRead) {
+          const fullRes = await sheets.spreadsheets.values.get({
+            spreadsheetId: SHEET_ID,
+            range: `'${incomeTab}'!A1:Z500`,
+            valueRenderOption: 'UNFORMATTED_VALUE'
+          });
+          incomeRows = fullRes.data.values || [];
+          headerRowIdx = evalPLRows(incomeRows);
+        } else {
+          incomeRows = rows;
+          headerRowIdx = hi;
+        }
+        cachedPLTab = incomeTab; // remember for next invocation
+        break;
+      }
+    }
+  }
+
+  if (!incomeTab) {
+    throw new Error(`Could not auto-detect P&L tab among top candidates: ${plScanOrder.slice(0, 5).join(', ')}. All available tabs: ${tabs.join(', ')}`);
+  }
+
+  // Find Transactions tab (name match — "Transactions Database" is distinctive)
   const txnTab = txnScanOrder.find(t => TXN_CANDIDATES.some(pat => pat.test(t)));
 
   const headerRow = incomeRows[headerRowIdx];
