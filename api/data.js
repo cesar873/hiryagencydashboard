@@ -375,6 +375,7 @@ async function fetchSheetData() {
   let activeClients90d = new Array(months.length).fill(0);
   let REV_TXNS = [];
   let EXP_TXNS = [];
+  let txnDebug = { rowsRead: 0, headerFound: false, txnsKept: 0, error: null };
 
   if (txnTab) {
     try {
@@ -384,14 +385,20 @@ async function fetchSheetData() {
         valueRenderOption: 'FORMATTED_VALUE'
       });
       const txnRows = txnRes.data.values || [];
+      txnDebug.rowsRead = txnRows.length;
       const result = processTransactions(txnRows, months);
+      txnDebug.headerFound = result.headerFound;
+      txnDebug.txnsKept = (result.revTxnList || []).length + (result.expTxnList || []).length;
       MOM_DATA = result.mom;
       activeClients90d = result.active;
       REV_TXNS = result.revTxnList;
       EXP_TXNS = result.expTxnList;
     } catch (e) {
       console.error('[data.js] Failed to read transactions tab:', e.message);
+      txnDebug.error = e.message;
     }
+  } else {
+    txnDebug.error = 'No transactions tab found in the spreadsheet';
   }
 
   return {
@@ -417,7 +424,10 @@ async function fetchSheetData() {
       incomeTab,
       txnTab: txnTab || null,
       monthsLoaded: months.length,
-      window: `${months[0]} → ${months[months.length - 1]}`
+      window: `${months[0]} → ${months[months.length - 1]}`,
+      txnDebug,
+      revenueEntities: MOM_DATA.revenue.length,
+      expenseEntities: MOM_DATA.expenses.length
     }
   };
 }
@@ -444,7 +454,13 @@ function processTransactions(rows, monthsWindow) {
     }
   }
   if (headerIdx < 0) {
-    return { mom: { months: monthsWindow, revenue: [], expenses: [] }, active: new Array(monthsWindow.length).fill(0) };
+    return {
+      mom: { months: monthsWindow, revenue: [], expenses: [] },
+      active: new Array(monthsWindow.length).fill(0),
+      revTxnList: [],
+      expTxnList: [],
+      headerFound: false
+    };
   }
 
   // Map "Mmm YY" → window index
@@ -545,7 +561,8 @@ function processTransactions(rows, monthsWindow) {
     mom: { months: monthsWindow, revenue, expenses },
     active,
     revTxnList,
-    expTxnList
+    expTxnList,
+    headerFound: true
   };
 }
 
@@ -553,7 +570,9 @@ function processTransactions(rows, monthsWindow) {
 export default async function handler(req, res) {
   try {
     const now = Date.now();
-    if (memCache && (now - memCacheAt) < CACHE_TTL_SECONDS * 1000) {
+    const forceRefresh = req.query && (req.query.refresh === '1' || req.query.fresh === '1');
+
+    if (!forceRefresh && memCache && (now - memCacheAt) < CACHE_TTL_SECONDS * 1000) {
       res.setHeader('Cache-Control', `public, s-maxage=${CACHE_TTL_SECONDS}, stale-while-revalidate=60`);
       res.setHeader('X-Cache', 'HIT');
       return res.status(200).json(memCache);
@@ -563,8 +582,14 @@ export default async function handler(req, res) {
     memCache = data;
     memCacheAt = now;
 
-    res.setHeader('Cache-Control', `public, s-maxage=${CACHE_TTL_SECONDS}, stale-while-revalidate=60`);
-    res.setHeader('X-Cache', 'MISS');
+    if (forceRefresh) {
+      // Don't let edge cache serve this; signal it's fresh
+      res.setHeader('Cache-Control', 'no-store, max-age=0');
+      res.setHeader('X-Cache', 'BYPASS');
+    } else {
+      res.setHeader('Cache-Control', `public, s-maxage=${CACHE_TTL_SECONDS}, stale-while-revalidate=60`);
+      res.setHeader('X-Cache', 'MISS');
+    }
     return res.status(200).json(data);
   } catch (error) {
     console.error('[api/data] Error:', error);

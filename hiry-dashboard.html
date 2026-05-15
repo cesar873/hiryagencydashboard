@@ -461,6 +461,7 @@ tr:last-child td { border-bottom: none; }
   <span class="arrow">→</span>
   <select id="fltRangeEnd" onchange="applyFilters()"><option value="0">Apr 25</option><option value="1">May 25</option><option value="2">Jun 25</option><option value="3">Jul 25</option><option value="4">Aug 25</option><option value="5">Sep 25</option><option value="6">Oct 25</option><option value="7">Nov 25</option><option value="8">Dec 25</option><option value="9">Jan 26</option><option value="10">Feb 26</option><option value="11">Mar 26</option><option value="12" selected>Apr 26</option></select>
   <button class="refresh" onclick="applyFilters()">↻ Refresh</button>
+  <button class="refresh" onclick="forceReloadData()" title="Force re-pull from Google Sheets, bypassing the 5-min cache" style="border-color:rgba(34,197,94,0.4);color:#22c55e">⟳ Sync Sheet</button>
 </div>
 
 <nav>
@@ -1648,6 +1649,29 @@ function applyFilters() {
   applyRangeToCharts();
 }
 
+
+async function forceReloadData() {
+  const btn = event && event.target;
+  if (btn) { btn.textContent = '⟳ Syncing...'; btn.disabled = true; }
+  try {
+    const res = await fetch('/api/data?refresh=1', { cache: 'no-store' });
+    if (!res.ok) throw new Error(`API ${res.status}`);
+    const D = await res.json();
+    applyData(D);
+    // Rebuild charts with fresh data
+    Object.values(chartRegistry).forEach(c => c.destroy());
+    Object.keys(chartRegistry).forEach(k => delete chartRegistry[k]);
+    const activeTab = document.querySelector('.page.active');
+    if (activeTab) buildCharts(activeTab.id);
+    renderRevTxns();
+    renderExpTxns();
+    applyFilters();
+    if (btn) { btn.textContent = '✓ Synced'; setTimeout(() => { btn.textContent = '⟳ Sync Sheet'; btn.disabled = false; }, 2000); }
+  } catch (err) {
+    console.error('Force reload failed:', err);
+    if (btn) { btn.textContent = '✗ Failed'; setTimeout(() => { btn.textContent = '⟳ Sync Sheet'; btn.disabled = false; }, 3000); }
+  }
+}
 
 async function loadData() {
   const overlay = document.getElementById('loading-overlay');
