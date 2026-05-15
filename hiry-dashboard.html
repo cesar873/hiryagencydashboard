@@ -468,7 +468,6 @@ tr:last-child td { border-bottom: none; }
   <button class="tab-btn active" onclick="showTab(this,'financials')">Financials</button>
   <button class="tab-btn" onclick="showTab(this,'revenue')">Revenue</button>
   <button class="tab-btn" onclick="showTab(this,'expenses')">Expenses</button>
-  <button class="tab-btn" onclick="showTab(this,'budget')">Budget vs Actual</button>
   <button class="tab-btn" onclick="showTab(this,'receivables')">Receivables</button>
 </nav>
 
@@ -1030,11 +1029,10 @@ tr:last-child td { border-bottom: none; }
 
   </div>
 
-</div>
 
-<!-- ══════════════════════════════ RECEIVABLES ══ -->
-<!-- ══════════════════════════════ BUDGET vs ACTUAL ══ -->
-<div id="budget" class="page">
+
+  <!-- ─── Budget vs Actual ─── -->
+
   <div class="panel" style="margin-bottom:14px">
     <h2 id="budgetTitle">Budget vs Actual · —</h2>
     <p class="sub" id="budgetSub">Single-month comparison · ordered Revenue → COGS → Expenses · use the Period filter above to switch months</p>
@@ -1083,8 +1081,10 @@ tr:last-child td { border-bottom: none; }
       <tbody id="budgetTbody"><tr><td colspan="6" style="padding:60px;text-align:center;color:var(--muted)">Loading…</td></tr></tbody>
     </table>
   </div>
+
 </div>
 
+<!-- ══════════════════════════════ RECEIVABLES ══ -->
 <div id="receivables" class="page">
 
   <div class="panel" style="text-align:center;padding:60px 40px">
@@ -1127,7 +1127,7 @@ Chart.register(ChartDataLabels);
 // ── Lazy chart system
 const chartRegistry = {};
 const chartFactories = {};
-const tabCharts = { revenue: [], expenses: [], financials: [], receivables: [], budget: [] };
+const tabCharts = { revenue: [], expenses: [], financials: [], receivables: [] };
 
 function defChart(tabId, chartId, configFn) {
   tabCharts[tabId].push(chartId);
