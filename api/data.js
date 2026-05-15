@@ -126,17 +126,33 @@ async function fetchSheetData() {
   const plScanOrder = orderByCandidates(tabs, PL_CANDIDATES);
   const txnScanOrder = orderByCandidates(tabs, TXN_CANDIDATES);
 
+  // Recognize cells like "Apr 2026", "April 2026", "Apr-26", "4/1/2026", etc.
+  function looksLikeMonth(s) {
+    if (!s) return false;
+    const v = String(s).trim();
+    if (!v) return false;
+    // "Apr 2026" / "Apr 26"
+    if (/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s\-\/.,]+\d{2,4}$/i.test(v)) return true;
+    // "January 2026"
+    if (/^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}$/i.test(v)) return true;
+    // ISO-ish "2026-04" or "2026/04"
+    if (/^\d{4}[\-\/]\d{1,2}$/.test(v)) return true;
+    // M/D/YYYY (in case it's stored as date)
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v)) return true;
+    return false;
+  }
+
   // Helper to evaluate whether a sheet of rows looks like a P&L
   function evalPLRows(rows) {
     if (!rows || rows.length < 5) return -1;
     let headerIdx = -1;
     for (let i = 0; i < Math.min(rows.length, 40); i++) {
       const row = rows[i] || [];
-      const monthHits = row.filter(c => /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}$/.test(String(c || '').trim())).length;
+      const monthHits = row.filter(c => looksLikeMonth(c)).length;
       if (monthHits >= 6) { headerIdx = i; break; }
     }
     if (headerIdx < 0) return -1;
-    const canonicalLabels = ['total revenue', 'total cost of sales', 'operating income', 'total operating expenses', 'gross profit'];
+    const canonicalLabels = ['total revenue', 'total cost of sales', 'operating income', 'total operating expenses', 'gross profit', 'cost of sales', 'operating margin'];
     const hasPLLabel = rows.some(r => r && canonicalLabels.includes(String(r[0] || '').toLowerCase().trim()));
     return hasPLLabel ? headerIdx : -1;
   }
@@ -152,7 +168,7 @@ async function fetchSheetData() {
       const r = await sheets.spreadsheets.values.get({
         spreadsheetId: SHEET_ID,
         range: `'${cachedPLTab}'!A1:Z500`,
-        valueRenderOption: 'UNFORMATTED_VALUE'
+        valueRenderOption: 'FORMATTED_VALUE'
       });
       const rows = r.data.values || [];
       const hi = evalPLRows(rows);
@@ -177,7 +193,7 @@ async function fetchSheetData() {
       batchRes = await sheets.spreadsheets.values.batchGet({
         spreadsheetId: SHEET_ID,
         ranges,
-        valueRenderOption: 'UNFORMATTED_VALUE'
+        valueRenderOption: 'FORMATTED_VALUE'
       });
     } catch (e) {
       throw new Error(`Sheet read failed during P&L tab detection: ${e.message}`);
@@ -194,7 +210,7 @@ async function fetchSheetData() {
           const fullRes = await sheets.spreadsheets.values.get({
             spreadsheetId: SHEET_ID,
             range: `'${incomeTab}'!A1:Z500`,
-            valueRenderOption: 'UNFORMATTED_VALUE'
+            valueRenderOption: 'FORMATTED_VALUE'
           });
           incomeRows = fullRes.data.values || [];
           headerRowIdx = evalPLRows(incomeRows);
@@ -217,18 +233,51 @@ async function fetchSheetData() {
 
   const headerRow = incomeRows[headerRowIdx];
   const monthCols = []; // { colIdx, shortLabel, fullLabel }
-  for (let c = 0; c < headerRow.length; c++) {
-    const v = String(headerRow[c] || '').trim();
-    const m = v.match(/^([A-Z][a-z]{2})\s+(\d{4})$/);
+
+  // Parse any cell that represents a month → returns { monShort: "Apr", year4: 2026 } or null
+  function parseMonthCell(v) {
+    if (!v) return null;
+    const s = String(v).trim();
+    if (!s) return null;
+    // Try short month "Apr 2026" or "Apr 26"
+    let m = s.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s\-\/.,]+(\d{2,4})$/i);
     if (m) {
-      const monShort = m[1];
-      const fullYear = m[2];
-      const yrShort = fullYear.slice(2);
-      const monFullIdx = MONTH_SHORT.indexOf(monShort);
+      const monShort = m[1][0].toUpperCase() + m[1].slice(1, 3).toLowerCase();
+      const yr = parseInt(m[2], 10);
+      const year4 = yr < 100 ? 2000 + yr : yr;
+      return { monShort, year4 };
+    }
+    // Full month "January 2026"
+    m = s.match(/^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})$/i);
+    if (m) {
+      const fullName = m[1][0].toUpperCase() + m[1].slice(1).toLowerCase();
+      const idx = MONTH_FULL.indexOf(fullName);
+      if (idx >= 0) return { monShort: MONTH_SHORT[idx], year4: parseInt(m[2], 10) };
+    }
+    // ISO "2026-04"
+    m = s.match(/^(\d{4})[\-\/](\d{1,2})$/);
+    if (m) {
+      const monIdx = parseInt(m[2], 10) - 1;
+      if (monIdx >= 0 && monIdx < 12) return { monShort: MONTH_SHORT[monIdx], year4: parseInt(m[1], 10) };
+    }
+    // Date string "4/1/2026"
+    m = s.match(/^(\d{1,2})\/\d{1,2}\/(\d{4})$/);
+    if (m) {
+      const monIdx = parseInt(m[1], 10) - 1;
+      if (monIdx >= 0 && monIdx < 12) return { monShort: MONTH_SHORT[monIdx], year4: parseInt(m[2], 10) };
+    }
+    return null;
+  }
+
+  for (let c = 0; c < headerRow.length; c++) {
+    const parsed = parseMonthCell(headerRow[c]);
+    if (parsed) {
+      const yrShort = String(parsed.year4).slice(2);
+      const monFullIdx = MONTH_SHORT.indexOf(parsed.monShort);
       monthCols.push({
         colIdx: c,
-        shortLabel: `${monShort} ${yrShort}`,
-        fullLabel: `${MONTH_FULL[monFullIdx]} ${fullYear}`
+        shortLabel: `${parsed.monShort} ${yrShort}`,
+        fullLabel: `${MONTH_FULL[monFullIdx]} ${parsed.year4}`
       });
     }
   }
@@ -332,7 +381,7 @@ async function fetchSheetData() {
       const txnRes = await sheets.spreadsheets.values.get({
         spreadsheetId: SHEET_ID,
         range: `'${txnTab}'!A1:Z50000`,
-        valueRenderOption: 'UNFORMATTED_VALUE'
+        valueRenderOption: 'FORMATTED_VALUE'
       });
       const txnRows = txnRes.data.values || [];
       const result = processTransactions(txnRows, months);
