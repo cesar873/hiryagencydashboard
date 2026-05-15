@@ -1034,166 +1034,16 @@ tr:last-child td { border-bottom: none; }
 <!-- ══════════════════════════════ RECEIVABLES ══ -->
 <div id="receivables" class="page">
 
-  <div class="kpi-grid-3 gap">
-    <div class="kpi">
-      <div class="label">Total AR Outstanding</div>
-      <div class="value" style="color:var(--amber)">$34,040</div>
-      <div class="delta down">▼ 8 open invoices</div>
+  <div class="panel" style="text-align:center;padding:60px 40px">
+    <div style="font-family:'Anton',sans-serif;font-size:24px;letter-spacing:1.5px;color:rgba(255,255,255,0.7);margin-bottom:14px">
+      RECEIVABLES DATA NOT YET CONNECTED
     </div>
-    <div class="kpi">
-      <div class="label">Overdue 60+ Days</div>
-      <div class="value" style="color:var(--red)">$1,200</div>
-      <div class="delta down">▼ Flow Neuroscience · 90 days</div>
+    <div style="color:var(--muted);font-size:14px;line-height:1.6;max-width:560px;margin:0 auto 24px">
+      Once you populate the <b style="color:var(--text)">Receivables</b> tab in your Google Sheet with open invoices,<br>
+      this tab will automatically show AR aging, overdue balances, and write-offs.
     </div>
-    <div class="kpi">
-      <div class="label">Write-offs (TTM)</div>
-      <div class="value">$2,000</div>
-      <div class="delta">2 invoices · Flow Neuroscience</div>
-    </div>
-  </div>
-
-  <div class="grid-12 gap">
-    <div class="panel" style="display:flex;flex-direction:column;gap:20px;align-self:start">
-      <div>
-        <h2>AR Aging</h2>
-        <p class="sub">Outstanding by days overdue</p>
-        <div class="donut-wrap" style="width:120px;height:120px;margin-top:10px">
-          <canvas id="arAgingDonut"></canvas>
-          <div class="donut-label"><div class="dl-val">$34K</div><div class="dl-sub">Open AR</div></div>
-        </div>
-        <div class="legend-row" style="justify-content:center;margin-top:12px;flex-direction:column;align-items:center;gap:6px">
-          <span><span class="legend-dot" style="background:var(--green)"></span>0–30 days · $5,120 (15%)</span>
-          <span><span class="legend-dot" style="background:var(--amber)"></span>31–60 days · $27,720 (81%)</span>
-          <span><span class="legend-dot" style="background:var(--red)"></span>61–90+ days · $1,200 (4%)</span>
-        </div>
-      </div>
-      <div class="divider"></div>
-      <div>
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px">Aging Bands</div>
-        <div class="ar-aging-row">
-          <div class="ar-aging-label" style="color:var(--green)">0–30 d</div>
-          <div class="ar-aging-bar-bg"><div class="ar-aging-bar-fill" style="width:15%;background:var(--green)"></div></div>
-          <div class="ar-aging-val">$5,120</div>
-        </div>
-        <div class="ar-aging-row">
-          <div class="ar-aging-label" style="color:var(--amber)">31–60 d</div>
-          <div class="ar-aging-bar-bg"><div class="ar-aging-bar-fill" style="width:81%;background:var(--amber)"></div></div>
-          <div class="ar-aging-val">$27,720</div>
-        </div>
-        <div class="ar-aging-row">
-          <div class="ar-aging-label" style="color:var(--red)">61–90+ d</div>
-          <div class="ar-aging-bar-bg"><div class="ar-aging-bar-fill" style="width:4%;background:var(--red)"></div></div>
-          <div class="ar-aging-val">$1,200</div>
-        </div>
-      </div>
-    </div>
-    <div class="panel">
-      <h2>Open Invoices</h2>
-      <p class="sub">All unpaid and overdue invoices as of Mar 2026</p>
-      <div class="tbl-scroll">
-        <table>
-          <thead><tr>
-            <th>Customer</th>
-            <th>Type</th>
-            <th class="num">Invoice Date</th>
-            <th class="num">Days Overdue</th>
-            <th class="num" style="min-width:120px;padding-right:16px">Amount</th>
-            <th style="padding-left:16px">Status</th>
-          </tr></thead>
-          <tbody>
-            <tr>
-              <td>Flow Neuroscience AB</td>
-              <td><span style="font-size:11px;color:var(--muted)">—</span></td>
-              <td class="num" style="color:var(--muted)">Dec 2025</td>
-              <td class="num" style="color:var(--red)">90</td>
-              <td class="num" style="padding-right:16px"><span class="amt-value" style="color:var(--red)">$1,200</span></td>
-              <td style="padding-left:16px"><span class="pill lost">Unpaid</span></td>
-            </tr>
-            <tr>
-              <td>Madhappy</td>
-              <td><span style="font-size:11px;color:var(--muted)">Upfront Project</span></td>
-              <td class="num" style="color:var(--muted)">Jan 2026</td>
-              <td class="num" style="color:var(--amber)">57</td>
-              <td class="num" style="padding-right:16px"><span class="amt-value" style="color:var(--amber)">$2,000</span></td>
-              <td style="padding-left:16px"><span class="pill warn">Unpaid</span></td>
-            </tr>
-            <tr>
-              <td>Travel + Leisure</td>
-              <td><span style="font-size:11px;color:var(--muted)">—</span></td>
-              <td class="num" style="color:var(--muted)">Jan 2026</td>
-              <td class="num" style="color:var(--amber)">56</td>
-              <td class="num" style="padding-right:16px"><span class="amt-value" style="color:var(--amber)">$6,400</span></td>
-              <td style="padding-left:16px"><span class="pill warn">Unpaid</span></td>
-            </tr>
-            <tr>
-              <td>Peppertux</td>
-              <td><span style="font-size:11px;color:var(--muted)">—</span></td>
-              <td class="num" style="color:var(--muted)">Jan 2026</td>
-              <td class="num" style="color:var(--amber)">55</td>
-              <td class="num" style="padding-right:16px"><span class="amt-value" style="color:var(--amber)">$3,200</span></td>
-              <td style="padding-left:16px"><span class="pill warn">Unpaid</span></td>
-            </tr>
-            <tr>
-              <td>BeautyStat</td>
-              <td><span style="font-size:11px;color:var(--muted)">—</span></td>
-              <td class="num" style="color:var(--muted)">Jan 2026</td>
-              <td class="num" style="color:var(--amber)">49</td>
-              <td class="num" style="padding-right:16px"><span class="amt-value" style="color:var(--amber)">$14,680</span></td>
-              <td style="padding-left:16px"><span class="pill warn">Unpaid</span></td>
-            </tr>
-            <tr>
-              <td>Flow Neuroscience AB</td>
-              <td><span style="font-size:11px;color:var(--muted)">—</span></td>
-              <td class="num" style="color:var(--muted)">Feb 2026</td>
-              <td class="num" style="color:var(--amber)">43</td>
-              <td class="num" style="padding-right:16px"><span class="amt-value" style="color:var(--amber)">$800</span></td>
-              <td style="padding-left:16px"><span class="pill warn">Unpaid</span></td>
-            </tr>
-            <tr>
-              <td>Flow Neuroscience AB</td>
-              <td><span style="font-size:11px;color:var(--muted)">—</span></td>
-              <td class="num" style="color:var(--muted)">Feb 2026</td>
-              <td class="num" style="color:var(--amber)">43</td>
-              <td class="num" style="padding-right:16px"><span class="amt-value" style="color:var(--amber)">$640</span></td>
-              <td style="padding-left:16px"><span class="pill warn">Unpaid</span></td>
-            </tr>
-            <tr>
-              <td>Tiege Hanley</td>
-              <td><span style="font-size:11px;color:var(--muted)">Retainer</span></td>
-              <td class="num" style="color:var(--muted)">Mar 2026</td>
-              <td class="num" style="color:var(--green)">25</td>
-              <td class="num" style="padding-right:16px"><span class="amt-value" style="color:var(--blue)">$5,120</span></td>
-              <td style="padding-left:16px"><span class="pill info">In Process</span></td>
-            </tr>
-            <tr class="grand-total">
-              <td colspan="4"><strong>Total Outstanding</strong></td>
-              <td class="num"><span class="amt-value">$34,040</span></td>
-              <td></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div style="margin-top:20px;border-top:1px solid var(--card-border);padding-top:14px">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px">Write-offs (TTM)</div>
-        <table>
-          <thead><tr><th>Customer</th><th>Invoice</th><th class="num">Amount</th><th>Status</th></tr></thead>
-          <tbody>
-            <tr>
-              <td>Flow Neuroscience AB</td>
-              <td style="color:var(--muted);font-size:12px">IRP6LRJD-0003</td>
-              <td class="num" style="color:var(--muted)">$800</td>
-              <td><span class="pill wo">Write Off</span></td>
-            </tr>
-            <tr>
-              <td>Flow Neuroscience AB</td>
-              <td style="color:var(--muted);font-size:12px">IRP6LRJD-0005</td>
-              <td class="num" style="color:var(--muted)">$1,200</td>
-              <td><span class="pill wo">Write Off</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <div style="display:inline-block;background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:8px;padding:14px 20px;text-align:left;font-family:'DM Sans';font-size:12px;color:var(--muted)">
+      Expected columns: <b style="color:var(--text)">Customer</b> · <b style="color:var(--text)">Invoice Date</b> · <b style="color:var(--text)">Due Date</b> · <b style="color:var(--text)">Amount</b> · <b style="color:var(--text)">Status</b>
     </div>
   </div>
 
@@ -2027,27 +1877,8 @@ defChart('expenses', 'opexBreakChart', () => ({
 }));
 
 // ── AR Aging Donut
-defChart('receivables', 'arAgingDonut', () => ({
-  type: 'doughnut',
-  data: {
-    labels: ['0–30 days','31–60 days','61–90+ days'],
-    datasets: [{ data: [5120,27720,1200], backgroundColor: ['#22c55e','#f59e0b','#ef4444'], borderWidth: 0, hoverOffset: 4 }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false, cutout: '72%',
-    plugins: {
-      legend: { display: false },
-      datalabels: {
-        display: true,
-        formatter: (v, ctx) => {
-          const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-          return Math.round(v / total * 100) + '%';
-        },
-        color: '#fff', font: { size: 10, weight: '700' }
-      }
-    }
-  }
-}));
+// Receivables tab is currently an empty state (no chart to register).
+// When the Receivables sheet tab is populated, wire a real chart here.
 
 // ── Transaction tables (dynamic rendering)
 let REV_TXNS = [];
