@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Vercel
+.vercel/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Service account keys (NEVER commit)
+*service-account*.json
+*credentials*.json
+*-key.json
+google-key.json
+
+# Raw data (sensitive — pulled live from Sheets now)
+*.csv
+
+# Old / unused HTML
+dashboard.html
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Claude
+.claude/

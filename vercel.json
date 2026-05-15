@@ -1,0 +1,10 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/hiry-dashboard.html" }
+  ],
+  "functions": {
+    "api/data.js": {
+      "maxDuration": 30
+    }
+  }
+}

@@ -1,0 +1,2082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgenCFO x Hiry Agency</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+:root {
+  --blue:        #1390eb;
+  --blue-soft:   rgba(19,144,235,0.18);
+  --green:       #22c55e;
+  --green-soft:  rgba(34,197,94,0.18);
+  --red:         #ef4444;
+  --red-soft:    rgba(239,68,68,0.18);
+  --amber:       #f59e0b;
+  --purple:      #c084fc;
+  --yellow:      #fde047;
+  --bg: linear-gradient(180deg, #000000 0%, #001a2e 50%, #003b6f 100%);
+  --card:        rgba(255,255,255,0.04);
+  --card-strong: rgba(255,255,255,0.07);
+  --card-border: rgba(255,255,255,0.08);
+  --text:  #ffffff;
+  --muted: rgba(255,255,255,0.55);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  background-attachment: fixed;
+  min-height: 100vh;
+  padding: 0 0 60px;
+}
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 36px 0;
+}
+.logo { font-family: 'Anton', sans-serif; font-size: 26px; letter-spacing: 1px; }
+.logo .b { color: var(--blue); }
+.logo .x { color: var(--muted); font-size: 20px; margin: 0 8px; }
+.header-meta { text-align: right; }
+.last-updated { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+.period-badge {
+  display: inline-block; margin-top: 4px;
+  font-size: 10px; font-weight: 500; padding: 2px 10px; border-radius: 100px;
+  letter-spacing: 0.5px; text-transform: uppercase;
+  background: var(--blue-soft); color: var(--blue);
+}
+nav {
+  display: flex; padding: 18px 36px 0;
+  border-bottom: 1px solid var(--card-border);
+  overflow-x: auto; gap: 4px;
+}
+.tab-btn {
+  background: none; border: none; color: var(--muted);
+  font-family: 'Anton', sans-serif; font-size: 13px;
+  letter-spacing: 1.2px; text-transform: uppercase;
+  padding: 10px 22px 14px;
+  cursor: pointer; border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--text); border-bottom-color: var(--blue); }
+.page { display: none; padding: 28px 36px 0; }
+.page.active { display: block; }
+.panel {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 20px;
+  backdrop-filter: blur(12px);
+}
+.panel h2 {
+  font-family: 'Anton', sans-serif;
+  font-size: 18px; text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.panel .sub { color: var(--muted); font-size: 12px; margin-bottom: 16px; }
+.kpi-grid   { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px; }
+.kpi-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 20px; }
+.kpi {
+  background: var(--card-strong); border: 1px solid var(--card-border);
+  border-radius: 10px; padding: 18px 20px;
+}
+.kpi .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+.kpi .value { font-family: 'Anton', sans-serif; font-size: 30px; letter-spacing: 0.5px; line-height: 1; }
+.kpi .delta { font-size: 12px; margin-top: 6px; color: var(--muted); }
+.delta.up { color: var(--green); }
+.delta.down { color: var(--red); }
+.grid-2  { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.grid-21 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+.grid-12 { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; }
+.gap { margin-bottom: 16px; }
+.chart-wrap       { position: relative; height: 220px; }
+.chart-wrap.tall  { height: 290px; }
+.chart-wrap.short { height: 170px; }
+.tbl-scroll { overflow-x: auto; }
+.tbl-scroll-y { overflow-y: auto; max-height: 380px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th {
+  font-size: 11px; font-weight: 500; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.7px;
+  text-align: left; padding: 7px 12px 7px 0;
+  border-bottom: 1px solid var(--card-border);
+  white-space: nowrap;
+  position: sticky; top: 0;
+  background: rgba(0,10,25,0.92);
+  backdrop-filter: blur(8px);
+  z-index: 1;
+}
+td {
+  padding: 7px 12px 7px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+tr:hover td { background: rgba(255,255,255,0.02); }
+tr:last-child td { border-bottom: none; }
+.num { font-variant-numeric: tabular-nums; text-align: right; padding-right: 0; }
+.grand-total td { font-weight: 700; border-top: 1px solid var(--blue); background: rgba(19,144,235,0.06); }
+.subtotal td { font-weight: 600; border-top: 1px solid var(--card-border); }
+.cell-bar { display: inline-flex; align-items: center; gap: 6px; }
+.bar { display: inline-block; height: 5px; border-radius: 3px; flex-shrink: 0; vertical-align: middle; }
+.bar.blue   { background: var(--blue); }
+.bar.green  { background: var(--green); }
+.bar.red    { background: var(--red); }
+.bar.amber  { background: var(--amber); }
+.pill { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 100px; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }
+.pill.active { background: var(--green-soft); color: var(--green); }
+.pill.lost   { background: var(--red-soft); color: var(--red); }
+.pill.warn   { background: rgba(245,158,11,0.18); color: var(--amber); }
+.pill.info   { background: var(--blue-soft); color: var(--blue); }
+.pill.wo     { background: rgba(255,255,255,0.08); color: var(--muted); }
+.donut-wrap { position: relative; width: 130px; height: 130px; margin: 0 auto; }
+.donut-label {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%,-50%); text-align: center; pointer-events: none;
+}
+.donut-label .dl-val { font-family: 'Anton', sans-serif; font-size: 20px; line-height: 1; }
+.donut-label .dl-sub { font-size: 10px; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
+.stat-row { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 12px; }
+.stat-item .sl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+.stat-item .sv { font-family: 'Anton', sans-serif; font-size: 22px; }
+.metrics-strip {
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px;
+}
+.metric-card {
+  background: var(--card-strong); border: 1px solid var(--card-border);
+  border-radius: 10px; padding: 14px 18px;
+}
+.metric-card .ml { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
+.metric-card .mv { font-family: 'Anton', sans-serif; font-size: 24px; }
+.metric-card .ms { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.divider { width: 100%; height: 1px; background: var(--card-border); margin: 6px 0 14px; }
+.legend-row { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; font-size: 11px; color: var(--muted); }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: middle; }
+.ar-aging-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.ar-aging-label { font-size: 11px; color: var(--muted); width: 80px; text-align: right; }
+.ar-aging-bar-bg { flex: 1; height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+.ar-aging-bar-fill { height: 100%; border-radius: 4px; }
+.ar-aging-val { font-size: 12px; font-variant-numeric: tabular-nums; width: 60px; text-align: right; }
+.filter-bar {
+  display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;
+}
+.filter-bar select, .filter-bar input {
+  background: rgba(255,255,255,0.06); border: 1px solid var(--card-border);
+  color: var(--text); border-radius: 8px; padding: 6px 12px;
+  font-family: 'DM Sans', sans-serif; font-size: 12px; outline: none;
+}
+.filter-bar select:focus, .filter-bar input:focus { border-color: var(--blue); }
+.filter-bar select option { background: #001a2e; }
+.filter-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; }
+.tbl-count { font-size: 11px; color: var(--muted); margin-left: auto; }
+.amt-value { font-family: 'Anton', sans-serif; font-size: 16px; letter-spacing: 0.3px; }
+@media (max-width: 1100px) {
+  .kpi-grid, .kpi-grid-3, .metrics-strip { grid-template-columns: repeat(2,1fr); }
+  .grid-2, .grid-21, .grid-12, .grid-3 { grid-template-columns: 1fr; }
+  .page { padding: 20px 16px 0; }
+}
+
+.plbtn {
+  background: none; border: none; color: var(--blue);
+  font-size: 9px; padding: 0; margin-right: 6px;
+  cursor: pointer; display: inline-block;
+  transition: transform 0.18s; vertical-align: middle;
+  line-height: 1;
+}
+.plbtn.open { transform: rotate(90deg); }
+.plsub td { font-size: 12px; }
+
+/* ── Filter bar ─────────────────── */
+.filterbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 36px;
+  background: rgba(0,10,25,0.85);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--card-border);
+}
+.filterbar .label-pill {
+  font-family: 'Anton', sans-serif; font-size: 11px;
+  letter-spacing: 1.2px; color: var(--muted);
+  text-transform: uppercase;
+}
+.filterbar select {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--card-border);
+  color: var(--text); border-radius: 100px;
+  padding: 7px 14px; font-family: 'DM Sans', sans-serif;
+  font-size: 12px; outline: none; cursor: pointer;
+  min-width: 110px;
+}
+.filterbar select:hover { border-color: var(--blue); }
+.filterbar select:focus { border-color: var(--blue); }
+.filterbar select option { background: #001a2e; }
+.filterbar .arrow { color: var(--muted); font-size: 13px; }
+.filterbar .refresh {
+  margin-left: auto;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--card-border);
+  color: var(--text); border-radius: 100px;
+  padding: 7px 16px; font-family: 'DM Sans', sans-serif;
+  font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+}
+.filterbar .refresh:hover { border-color: var(--blue); color: var(--blue); }
+
+/* ── Insights box ─────────────────── */
+.insights {
+  background: linear-gradient(135deg, rgba(19,144,235,0.06), rgba(19,144,235,0.02));
+  border: 1px solid rgba(19,144,235,0.18);
+  border-radius: 12px;
+  padding: 18px 22px;
+  margin-bottom: 20px;
+}
+.insights-pill {
+  display: inline-block;
+  font-family: 'Anton', sans-serif; font-size: 10px;
+  letter-spacing: 1.5px; color: var(--blue);
+  border: 1px solid var(--blue);
+  border-radius: 100px; padding: 2px 10px;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+.insights-title {
+  display: inline-block;
+  font-family: 'Anton', sans-serif; font-size: 16px;
+  letter-spacing: 1px; text-transform: uppercase;
+  margin-left: 10px; vertical-align: middle;
+}
+.insights-list { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.insights-row { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.5; }
+.insights-row .ii { flex-shrink: 0; width: 16px; text-align: center; font-weight: 700; }
+.insights-row .ii.good { color: var(--green); }
+.insights-row .ii.bad  { color: var(--red); }
+.insights-row .ii.warn { color: var(--amber); }
+.insights-row .ii.neu  { color: var(--muted); }
+.insights-row b { color: var(--text); font-weight: 700; }
+
+/* ── MoM table (sticky cols) ─────────────────── */
+.mom-wrap {
+  position: relative; overflow-x: auto; overflow-y: auto;
+  max-height: 500px; border-radius: 8px;
+}
+.mom-tbl { border-collapse: separate; border-spacing: 0; min-width: 100%; }
+.mom-tbl th, .mom-tbl td {
+  padding: 8px 12px; white-space: nowrap;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  background: transparent;
+}
+.mom-tbl thead th {
+  position: sticky; top: 0; z-index: 4;
+  background: rgba(0,10,25,0.95);
+  backdrop-filter: blur(8px);
+  font-size: 11px; font-weight: 500; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.7px;
+  border-bottom: 1px solid var(--card-border);
+}
+.mom-tbl .col-frozen { position: sticky; left: 0; z-index: 2; background: rgba(0,10,25,0.92); }
+.mom-tbl thead .col-frozen { z-index: 5; }
+.mom-tbl tr:hover td { background: rgba(255,255,255,0.02); }
+.mom-tbl tr:hover .col-frozen { background: rgba(10,20,35,0.95); }
+.mom-tbl td.num { font-variant-numeric: tabular-nums; text-align: right; }
+.mom-tbl tfoot td {
+  position: sticky; bottom: 0; z-index: 3;
+  background: rgba(0,10,25,0.95);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--blue);
+  font-weight: 700;
+}
+.mom-tbl tfoot .col-frozen { z-index: 4; }
+.cell-pos { color: var(--text); }
+.cell-zero { color: rgba(255,255,255,0.18); }
+
+/* ── Password gate ───────────────────────────────────────────── */
+#authGate {
+  position: fixed; inset: 0; z-index: 9999;
+  background: linear-gradient(180deg, #000000 0%, #001a2e 50%, #003b6f 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+#authGate.hidden { display: none; }
+#authGate .box {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 36px 40px;
+  backdrop-filter: blur(12px);
+  width: 360px;
+  text-align: center;
+}
+#authGate .logo {
+  font-family: 'Anton', sans-serif;
+  font-size: 28px; letter-spacing: 1px;
+  margin-bottom: 24px;
+}
+#authGate .logo .a { color: #fff; }
+#authGate .logo .b { color: #1390eb; }
+#authGate .logo .x { color: rgba(255,255,255,0.35); margin: 0 8px; }
+#authGate h2 {
+  font-family: 'Anton', sans-serif;
+  text-transform: uppercase;
+  font-size: 16px; letter-spacing: 1.5px;
+  color: #fff; margin: 0 0 6px 0;
+}
+#authGate .sub {
+  color: rgba(255,255,255,0.55); font-size: 12px;
+  margin-bottom: 22px;
+}
+#authGate input {
+  width: 100%; box-sizing: border-box;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  color: #fff;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 14px;
+  padding: 12px 14px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+#authGate input:focus { border-color: #1390eb; }
+#authGate button {
+  width: 100%; margin-top: 12px;
+  background: #1390eb;
+  border: none; border-radius: 8px;
+  color: #fff;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-weight: 700; font-size: 13px;
+  text-transform: uppercase; letter-spacing: 1px;
+  padding: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+#authGate button:hover { background: #0f7bc8; }
+#authGate .err {
+  color: #ef4444; font-size: 12px;
+  margin-top: 10px; min-height: 16px;
+}
+
+</style>
+</head>
+<body>
+
+<!-- Loading overlay (shown until /api/data resolves) -->
+<div id="loading-overlay" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(180deg,#000 0%,#001a2e 50%,#003b6f 100%);display:flex;align-items:center;justify-content:center;color:#fff;font-family:'DM Sans',system-ui,sans-serif">
+  <div style="text-align:center">
+    <div style="font-family:'Anton',sans-serif;font-size:28px;letter-spacing:1.5px;margin-bottom:8px">
+      <span style="color:#fff">AGEN</span><span style="color:#1390eb">CFO</span>
+      <span style="color:rgba(255,255,255,0.4);margin:0 8px">×</span>
+      <span style="color:#fff">HIRY AGENCY</span>
+    </div>
+    <div style="color:rgba(255,255,255,0.55);font-size:13px;margin-top:18px">Loading live data from Google Sheets…</div>
+    <div style="margin-top:20px">
+      <div style="width:48px;height:48px;border:3px solid rgba(255,255,255,0.1);border-top-color:#1390eb;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto"></div>
+    </div>
+  </div>
+</div>
+<style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+
+<!-- Password gate -->
+<div id="authGate">
+  <div class="box">
+    <div class="logo"><span class="a">AGEN</span><span class="b">CFO</span><span class="x">×</span><span class="a">HIRY</span></div>
+    <h2>Restricted Access</h2>
+    <div class="sub">Enter password to view the dashboard</div>
+    <form id="authForm" onsubmit="return checkAuth(event)">
+      <input type="password" id="authPwd" autocomplete="off" autofocus placeholder="Password">
+      <button type="submit">Unlock</button>
+      <div class="err" id="authErr"></div>
+    </form>
+  </div>
+</div>
+<script>
+(function() {
+  const PW_HASH = 'f6fa08e008961801a5282ab5fe8da4c1275bf2f5bb59f43694782aec24b20705';
+  const KEY = 'hiry_dash_auth_v1';
+
+  async function sha256(str) {
+    const buf = new TextEncoder().encode(str);
+    const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  window.checkAuth = async function(e) {
+    e.preventDefault();
+    const v = document.getElementById('authPwd').value;
+    const errEl = document.getElementById('authErr');
+    errEl.textContent = '';
+    try {
+      const h = await sha256(v);
+      if (h === PW_HASH) {
+        sessionStorage.setItem(KEY, h);
+        document.getElementById('authGate').classList.add('hidden');
+      } else {
+        errEl.textContent = 'Incorrect password';
+        document.getElementById('authPwd').value = '';
+      }
+    } catch (err) {
+      errEl.textContent = 'Error — try again';
+    }
+    return false;
+  };
+
+  // Auto-unlock if already authed this session
+  if (sessionStorage.getItem(KEY) === PW_HASH) {
+    document.addEventListener('DOMContentLoaded', () => {
+      const g = document.getElementById('authGate');
+      if (g) g.classList.add('hidden');
+    });
+  }
+})();
+</script>
+
+<div class="header">
+  <div class="logo">
+    <span>AGEN</span><span class="b">CFO</span>
+    <span class="x">×</span>
+    <span>HIRY AGENCY</span>
+  </div>
+  <div class="header-meta">
+    <div class="last-updated">Data as of Apr 2026</div>
+    <div class="period-badge">TTM: May 2025 – Apr 2026</div>
+  </div>
+</div>
+
+
+<div class="filterbar">
+  <span class="label-pill">Filters</span>
+  <span class="label-pill" style="color:var(--text)">Period</span>
+  <select id="fltPeriod" onchange="applyFilters()"><option value="0">Apr 25</option><option value="1">May 25</option><option value="2">Jun 25</option><option value="3">Jul 25</option><option value="4">Aug 25</option><option value="5">Sep 25</option><option value="6">Oct 25</option><option value="7">Nov 25</option><option value="8">Dec 25</option><option value="9">Jan 26</option><option value="10">Feb 26</option><option value="11">Mar 26</option><option value="12" selected>Apr 26</option></select>
+  <span class="label-pill" style="color:var(--text)">Range</span>
+  <select id="fltRangeStart" onchange="applyFilters()"><option value="0" selected>Apr 25</option><option value="1">May 25</option><option value="2">Jun 25</option><option value="3">Jul 25</option><option value="4">Aug 25</option><option value="5">Sep 25</option><option value="6">Oct 25</option><option value="7">Nov 25</option><option value="8">Dec 25</option><option value="9">Jan 26</option><option value="10">Feb 26</option><option value="11">Mar 26</option><option value="12">Apr 26</option></select>
+  <span class="arrow">→</span>
+  <select id="fltRangeEnd" onchange="applyFilters()"><option value="0">Apr 25</option><option value="1">May 25</option><option value="2">Jun 25</option><option value="3">Jul 25</option><option value="4">Aug 25</option><option value="5">Sep 25</option><option value="6">Oct 25</option><option value="7">Nov 25</option><option value="8">Dec 25</option><option value="9">Jan 26</option><option value="10">Feb 26</option><option value="11">Mar 26</option><option value="12" selected>Apr 26</option></select>
+  <button class="refresh" onclick="applyFilters()">↻ Refresh</button>
+</div>
+
+<nav>
+  <button class="tab-btn active" onclick="showTab(this,'financials')">Financials</button>
+  <button class="tab-btn" onclick="showTab(this,'revenue')">Revenue</button>
+  <button class="tab-btn" onclick="showTab(this,'expenses')">Expenses</button>
+  <button class="tab-btn" onclick="showTab(this,'receivables')">Receivables</button>
+</nav>
+
+<!-- ══════════════════════════════ REVENUE ══ -->
+<div id="revenue" class="page">
+
+  <div id="revInsights" class="insights"></div>
+  <div class="kpi-grid gap">
+    <div class="kpi">
+      <div class="label">TTM Revenue</div>
+      <div class="value" style="color:var(--blue)" id="kpiRevTTM">$982K</div>
+      <div class="delta" id="kpiRevTTMSub">May 2025 – Apr 2026</div>
+    </div>
+    <div class="kpi">
+      <div class="label" id="kpiRevPeriodLabel">Apr 2026 Revenue</div>
+      <div class="value" id="kpiRevPeriod">$50.1K</div>
+      <div class="delta" id="kpiRevPeriodDelta">▼ -55.1% vs prior month</div>
+    </div>
+    <div class="kpi">
+      <div class="label" id="kpiActiveClientsLabel">Active Clients (90d ending Apr 26)</div>
+      <div class="value" id="kpiActiveClients">47</div>
+      <div class="delta">unique paying clients · Client Revenue</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Avg Deal Size</div>
+      <div class="value" id="kpiAvgDeal">$2,495</div>
+      <div class="delta">296 client invoices · TTM</div>
+    </div>
+  </div>
+
+  <!-- Revenue by Type + Revenue Mix (compact — no Top Clients) -->
+  <div class="grid-21 gap">
+    <div class="panel" style="display:flex;flex-direction:column">
+      <h2>Revenue by Type</h2>
+      <p class="sub">Client vs Candidate revenue — Apr 2025 to Mar 2026</p>
+      <div class="chart-wrap tall" style="flex:1;min-height:260px"><canvas id="revTypeChart"></canvas></div>
+    </div>
+    <div class="panel" style="display:flex;flex-direction:column;gap:20px;align-self:start">
+      <div>
+        <h2>Revenue Mix</h2>
+        <p class="sub">TTM share by type</p>
+        <div class="donut-wrap" style="width:120px;height:120px">
+          <canvas id="revMixDonut"></canvas>
+          <div class="donut-label"><div class="dl-val">$982K</div><div class="dl-sub">TTM</div></div>
+        </div>
+        <div class="legend-row" style="justify-content:center;margin-top:12px">
+          <span><span class="legend-dot" style="background:var(--blue)"></span>Client 70%</span>
+          <span><span class="legend-dot" style="background:var(--green)"></span>Candidate 30%</span>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div>
+        <div class="stat-row">
+          <div class="stat-item">
+            <div class="sl">Client Revenue (TTM)</div>
+            <div class="sv" style="color:var(--blue)">$691K</div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-item">
+            <div class="sl">Candidate Revenue (TTM)</div>
+            <div class="sv" style="color:var(--green)">$292K</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="metrics-strip gap">
+    <div class="metric-card">
+      <div class="ml">Avg Client Invoice</div>
+      <div class="mv">$2,495</div>
+      <div class="ms">296 transactions · Apr 25–Apr 26</div>
+    </div>
+    <div class="metric-card">
+      <div class="ml">Avg Client LTV</div>
+      <div class="mv">$5,972</div>
+      <div class="ms">121 unique clients · median $1,798</div>
+    </div>
+    <div class="metric-card">
+      <div class="ml">Deal Types</div>
+      <div class="mv">4</div>
+      <div class="ms">Client · Candidate · Referral · Placement</div>
+    </div>
+    <div class="metric-card">
+      <div class="ml">Top Client (LTV)</div>
+      <div class="mv" style="font-size:18px">Simply Nootropics</div>
+      <div class="ms">$34,248 lifetime</div>
+    </div>
+  </div>
+
+  <!-- Revenue Detail by Month -->
+  <div class="panel gap">
+    <h2>Revenue Detail — By Month</h2>
+    <p class="sub">Client revenue, candidate revenue, and totals — Apr 2025 to Apr 2026</p>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr>
+          <th>Type</th>
+          <th class="num">Apr 25</th><th class="num">May 25</th><th class="num">Jun 25</th>
+          <th class="num">Jul 25</th><th class="num">Aug 25</th><th class="num">Sep 25</th>
+          <th class="num">Oct 25</th><th class="num">Nov 25</th><th class="num">Dec 25</th>
+          <th class="num">Jan 26</th><th class="num">Feb 26</th><th class="num">Mar 26</th>
+          <th class="num">Apr 26</th>
+          <th class="num">TTM</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td>Client Revenue</td>
+            <td class="num">$31,532</td><td class="num">$49,167</td><td class="num">$53,783</td>
+            <td class="num">$74,682</td><td class="num">$65,465</td><td class="num">$61,407</td>
+            <td class="num">$65,870</td><td class="num">$56,297</td><td class="num">$58,238</td>
+            <td class="num">$21,453</td><td class="num">$57,867</td><td class="num">$91,613</td>
+            <td class="num">$35,277</td>
+            <td class="num"><div class="cell-bar"><span>$691K</span>&nbsp;<span class="bar blue" style="width:70px"></span></div></td>
+          </tr>
+          <tr>
+            <td>Candidate Revenue</td>
+            <td class="num">$23,422</td><td class="num">$27,924</td><td class="num">$27,731</td>
+            <td class="num">$23,377</td><td class="num">$19,805</td><td class="num">$25,805</td>
+            <td class="num">$25,649</td><td class="num">$30,556</td><td class="num">$21,514</td>
+            <td class="num">$30,982</td><td class="num">$23,516</td><td class="num">$19,964</td>
+            <td class="num">$14,862</td>
+            <td class="num"><div class="cell-bar"><span>$292K</span>&nbsp;<span class="bar green" style="width:27px"></span></div></td>
+          </tr>
+          <tr>
+            <td>Placement &amp; Referral</td>
+            <td class="num">$699</td><td class="num">$1,443</td><td class="num">$80</td>
+            <td class="num">$6,825</td><td class="num">$63</td><td class="num">$1,882</td>
+            <td class="num">—</td><td class="num">—</td><td class="num">—</td>
+            <td class="num">—</td><td class="num">$196</td><td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num"><div class="cell-bar"><span>$11K</span>&nbsp;<span class="bar purple" style="width:1px"></span></div></td>
+          </tr>
+          <tr>
+            <td>Refunds</td>
+            <td class="num">—</td><td class="num">—</td><td class="num">—</td>
+            <td class="num">—</td><td class="num" style="color:var(--red)">-$3,591</td><td class="num" style="color:var(--red)">-$270</td>
+            <td class="num" style="color:var(--red)">-$970</td><td class="num">—</td><td class="num" style="color:var(--red)">-$883</td>
+            <td class="num">—</td><td class="num" style="color:var(--red)">-$1,780</td><td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num" style="color:var(--red)">-$7,494</td>
+          </tr>
+          <tr class="grand-total">
+            <td><strong>Total Revenue</strong></td>
+            <td class="num">$55,653</td><td class="num">$78,534</td><td class="num">$81,594</td>
+            <td class="num">$104,884</td><td class="num">$81,741</td><td class="num">$88,825</td>
+            <td class="num">$88,558</td><td class="num">$84,847</td><td class="num">$78,869</td>
+            <td class="num">$52,436</td><td class="num">$79,799</td><td class="num">$111,576</td>
+            <td class="num">$50,139</td>
+            <td class="num"><div class="cell-bar"><span>$982K</span>&nbsp;<span class="bar blue" style="width:70px"></span></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Top Clients + Client Payments -->
+  <div class="grid-21 gap">
+    <div class="panel" style="display:flex;flex-direction:column">
+      <h2>Client Payments</h2>
+      <p class="sub">All revenue transactions — Apr 2025 to Apr 2026</p>
+      <div class="filter-bar">
+        <span class="filter-label">Type</span>
+        <select id="revTypeFilter" onchange="renderRevTxns()">
+          <option value="">All Types</option>
+          <option value="Client Revenue">Client Revenue</option>
+          <option value="Candidate Revenue">Candidate Revenue</option>
+          <option value="Referral Income">Referral Income</option>
+          <option value="Placement Revenue">Placement Revenue</option>
+        </select>
+        <input type="text" id="revSearch" placeholder="Search client name..." oninput="renderRevTxns()" style="min-width:180px">
+        <span class="tbl-count" id="revCount"></span>
+      </div>
+      <div class="tbl-scroll tbl-scroll-y" style="flex:1">
+        <table>
+          <thead><tr>
+            <th>Date</th>
+            <th>Client / Name</th>
+            <th>Type</th>
+            <th class="num">Amount</th>
+          </tr></thead>
+          <tbody id="revTxnBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel" style="align-self:start">
+      <h2>Top Clients by LTV</h2>
+      <p class="sub">Cumulative revenue — Apr 2025 to Apr 2026</p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--card-border)">
+          <span style="font-size:13px">Simply Nootropics</span>
+          <span style="font-family:'Anton',sans-serif;font-size:16px;color:var(--blue)">$34,248</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--card-border)">
+          <span style="font-size:13px">Mickey Woodley</span>
+          <span style="font-family:'Anton',sans-serif;font-size:16px;color:var(--blue)">$25,835</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--card-border)">
+          <span style="font-size:13px">Callum ODonoghue</span>
+          <span style="font-family:'Anton',sans-serif;font-size:16px;color:var(--blue)">$25,493</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--card-border)">
+          <span style="font-size:13px">Saltworks Company</span>
+          <span style="font-family:'Anton',sans-serif;font-size:16px;color:var(--blue)">$24,850</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--card-border)">
+          <span style="font-size:13px">Polar Hair Care</span>
+          <span style="font-family:'Anton',sans-serif;font-size:16px;color:var(--blue)">$23,382</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--card-border)">
+          <span style="font-size:13px">BeautyStat</span>
+          <span style="font-family:'Anton',sans-serif;font-size:16px;color:var(--blue)">$22,580</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--card-border)">
+          <span style="font-size:13px">TernSetups</span>
+          <span style="font-family:'Anton',sans-serif;font-size:16px;color:var(--blue)">$19,940</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--card-border)">
+          <span style="font-size:13px">Travel + Leisure</span>
+          <span style="font-family:'Anton',sans-serif;font-size:16px;color:var(--blue)">$17,350</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--card-border)">
+          <span style="font-size:13px">Tiege Hanley</span>
+          <span style="font-family:'Anton',sans-serif;font-size:16px;color:var(--blue)">$15,360</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0">
+          <span style="font-size:13px">Madhappy</span>
+          <span style="font-family:'Anton',sans-serif;font-size:16px;color:var(--blue)">$14,600</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revenue MoM by Client × Month -->
+  <div class="panel gap">
+    <h2>Revenue by Client × Month</h2>
+    <p class="sub">One row per unique client · scroll horizontally for full history · LTV column locked</p>
+    <div class="filter-bar">
+      <input type="text" id="momRevSearch" placeholder="Search client..." oninput="renderMomRev()" style="min-width:200px">
+      <select id="momRevType" onchange="renderMomRev()">
+        <option value="">All Types</option>
+        <option value="Client Revenue">Client Revenue</option>
+        <option value="Candidate Revenue">Candidate Revenue</option>
+        <option value="Referral Income">Referral Income</option>
+        <option value="Placement Revenue">Placement Revenue</option>
+      </select>
+      <span class="tbl-count" id="momRevCount"></span>
+    </div>
+    <div class="mom-wrap">
+      <table class="mom-tbl" id="momRevTbl"></table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════ EXPENSES ══ -->
+<div id="expenses" class="page">
+
+  <div id="expInsights" class="insights"></div>
+  <div class="kpi-grid gap">
+    <div class="kpi">
+      <div class="label" id="kpiExpTotalLabel">Total Expenses (Apr 2026)</div>
+      <div class="value" style="color:var(--red)" id="kpiExpTotal">$28.9K</div>
+      <div class="delta" id="kpiExpTotalSub">COGS + OpEx · selected period</div>
+    </div>
+    <div class="kpi">
+      <div class="label" id="kpiCOGSLabel">COGS (Apr 2026)</div>
+      <div class="value" id="kpiCOGS">$10.7K</div>
+      <div class="delta" id="kpiCOGSDelta">21.4% of revenue</div>
+    </div>
+    <div class="kpi">
+      <div class="label" id="kpiOpExLabel">OpEx (Apr 2026)</div>
+      <div class="value" id="kpiOpEx">$18.3K</div>
+      <div class="delta" id="kpiOpExDelta">36.4% of revenue</div>
+    </div>
+    <div class="kpi">
+      <div class="label" id="kpiTopVendorLabel">Top Vendor (Apr 2026)</div>
+      <div class="value" style="font-size:20px" id="kpiTopVendor">—</div>
+      <div class="delta" id="kpiTopVendorSub">—</div>
+    </div>
+  </div>
+
+  <!-- Expenses by Month + Expense Category (scrollable) -->
+  <div class="grid-21 gap">
+    <div class="panel" style="display:flex;flex-direction:column">
+      <h2>Total Expenses by Month</h2>
+      <p class="sub">COGS vs operating expenses — stacked · Apr 2025 to Apr 2026</p>
+      <div class="chart-wrap tall" style="flex:1;min-height:260px"><canvas id="expMonthlyChart"></canvas></div>
+    </div>
+    <div class="panel" style="align-self:start">
+      <h2>Expense Category</h2>
+      <p class="sub" id="expCatSub">Breakdown for Apr 26 — change period at top to drill into another month</p>
+      <div class="tbl-scroll-y" style="max-height:380px;margin-top:8px">
+        <table id="expCatTbl">
+          <thead><tr><th>Category</th><th style="width:64px">Type</th><th class="num">Amount</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- COGS & OpEx breakdown charts -->
+  <div class="grid-2 gap">
+    <div class="panel">
+      <h2>COGS Breakdown</h2>
+      <p class="sub">Cost of sales by component — monthly stacked</p>
+      <div class="chart-wrap"><canvas id="cogsBreakChart"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>OpEx Breakdown</h2>
+      <p class="sub">Operating expenses by category — monthly stacked</p>
+      <div class="chart-wrap"><canvas id="opexBreakChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Expense Transactions (filterable) -->
+  <div class="panel gap">
+    <h2>Expense Transactions</h2>
+    <p class="sub">Full ledger — Apr 2025 to Apr 2026</p>
+    <div class="filter-bar">
+      <span class="filter-label">Category</span>
+      <select id="expCatFilter" onchange="renderExpTxns()">
+        <option value="">All Categories</option>
+        <option value="Ads Spend Job Postings">Ads Spend Job Postings</option><option value="Bank & Transaction Fees">Bank & Transaction Fees</option><option value="Coaching">Coaching</option><option value="Commission Paid">Commission Paid</option><option value="Customer Success Manager">Customer Success Manager</option><option value="Ecom Brand Expense">Ecom Brand Expense</option><option value="Finance & Accounting">Finance & Accounting</option><option value="Freelancers (COGS)">Freelancers (COGS)</option><option value="Freelancers (OpEx)">Freelancers (OpEx)</option><option value="Google & Meta Ads">Google & Meta Ads</option><option value="Hotel & Lodging">Hotel & Lodging</option><option value="IT Costs">IT Costs</option><option value="Interviewers & Talent Partners">Interviewers & Talent Partners</option><option value="Legal Fees">Legal Fees</option><option value="Meals & Entertainment">Meals & Entertainment</option><option value="Moving Payment">Moving Payment</option><option value="Office & Admin">Office & Admin</option><option value="Office Equipment">Office Equipment</option><option value="Other Ads & Marketing">Other Ads & Marketing</option><option value="Referral Fee Expense">Referral Fee Expense</option><option value="Software & Subscriptions">Software & Subscriptions</option><option value="Software & Subscriptions - Recruitment">Software & Subscriptions - Recruitment</option><option value="Stripe Fees">Stripe Fees</option><option value="Talent Acquisition">Talent Acquisition</option><option value="Taxi & Share Rides">Taxi & Share Rides</option><option value="Telephone & Internet">Telephone & Internet</option><option value="Travel">Travel</option><option value="Wise Fees">Wise Fees</option>
+      </select>
+      <input type="text" id="expSearch" placeholder="Search vendor..." oninput="renderExpTxns()" style="min-width:180px">
+      <span class="tbl-count" id="expCount"></span>
+    </div>
+    <div class="tbl-scroll tbl-scroll-y">
+      <table>
+        <thead><tr>
+          <th>Date</th>
+          <th>Vendor / Name</th>
+          <th>Category</th>
+          <th class="num">Amount</th>
+        </tr></thead>
+        <tbody id="expTxnBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Expense MoM by Vendor × Category × Month -->
+  <div class="panel gap">
+    <h2>Spend by Vendor × Category × Month</h2>
+    <p class="sub">One row per vendor × category · scroll horizontally for full history · totals locked</p>
+    <div class="filter-bar">
+      <input type="text" id="momExpSearch" placeholder="Search vendor..." oninput="renderMomExp()" style="min-width:200px">
+      <select id="momExpCat" onchange="renderMomExp()">
+        <option value="">All Categories</option>
+        <option value="Ads Spend Job Postings">Ads Spend Job Postings</option><option value="Bank & Transaction Fees">Bank & Transaction Fees</option><option value="Coaching">Coaching</option><option value="Commission Paid">Commission Paid</option><option value="Customer Success Manager">Customer Success Manager</option><option value="Ecom Brand Expense">Ecom Brand Expense</option><option value="Finance & Accounting">Finance & Accounting</option><option value="Freelancers (COGS)">Freelancers (COGS)</option><option value="Freelancers (OpEx)">Freelancers (OpEx)</option><option value="Google & Meta Ads">Google & Meta Ads</option><option value="Hotel & Lodging">Hotel & Lodging</option><option value="IT Costs">IT Costs</option><option value="Interviewers & Talent Partners">Interviewers & Talent Partners</option><option value="Legal Fees">Legal Fees</option><option value="Meals & Entertainment">Meals & Entertainment</option><option value="Moving Payment">Moving Payment</option><option value="Office & Admin">Office & Admin</option><option value="Office Equipment">Office Equipment</option><option value="Other Ads & Marketing">Other Ads & Marketing</option><option value="Referral Fee Expense">Referral Fee Expense</option><option value="Software & Subscriptions">Software & Subscriptions</option><option value="Software & Subscriptions - Recruitment">Software & Subscriptions - Recruitment</option><option value="Stripe Fees">Stripe Fees</option><option value="Talent Acquisition">Talent Acquisition</option><option value="Taxi & Share Rides">Taxi & Share Rides</option><option value="Telephone & Internet">Telephone & Internet</option><option value="Travel">Travel</option><option value="Wise Fees">Wise Fees</option>
+      </select>
+      <span class="tbl-count" id="momExpCount"></span>
+    </div>
+    <div class="mom-wrap">
+      <table class="mom-tbl" id="momExpTbl"></table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════ FINANCIALS ══ -->
+<div id="financials" class="page active">
+
+  <div id="finInsights" class="insights"></div>
+  <div class="kpi-grid gap">
+    <div class="kpi">
+      <div class="label" id="kpiOpIncLabel">Operating Income (Apr 2026)</div>
+      <div class="value" style="color:var(--green)" id="kpiOpInc">$21.2K</div>
+      <div class="delta" id="kpiOpIncSub">42.2% margin</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Op Margin (Apr 2026)</div>
+      <div class="value" id="kpiOpMargin">42.2%</div>
+      <div class="delta">TTM avg 57.5%</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Gross Margin (Apr 2026)</div>
+      <div class="value" id="kpiGrossMargin">78.6%</div>
+      <div class="delta">TTM avg 86.4%</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Net Margin (Apr 2026)</div>
+      <div class="value" id="kpiNetMargin">42.2%</div>
+      <div class="delta">TTM avg 57.5%</div>
+    </div>
+  </div>
+
+  <div class="grid-2 gap">
+    <div class="panel">
+      <h2>Revenue vs Operating Income</h2>
+      <p class="sub">Monthly trend — bars = revenue, line = operating income</p>
+      <div class="chart-wrap tall"><canvas id="revVsOpChart"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>Monthly Margins</h2>
+      <p class="sub">Gross margin vs operating margin</p>
+      <div class="chart-wrap tall"><canvas id="marginChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel gap">
+    <h2>P&amp;L by Month</h2>
+    <p class="sub">Revenue, COGS, gross profit, OpEx, and operating income — Apr 2025 to Apr 2026</p>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr>
+          <th>Line</th>
+          <th class="num">Apr 25</th><th class="num">May 25</th><th class="num">Jun 25</th>
+          <th class="num">Jul 25</th><th class="num">Aug 25</th><th class="num">Sep 25</th>
+          <th class="num">Oct 25</th><th class="num">Nov 25</th><th class="num">Dec 25</th>
+          <th class="num">Jan 26</th><th class="num">Feb 26</th><th class="num">Mar 26</th>
+          <th class="num">Apr 26</th>
+          <th class="num">TTM</th>
+        </tr></thead>
+        <tbody>
+          <!-- REVENUE -->
+          <tr>
+            <td><button class="plbtn plbtn-rev" onclick="togglePL('rev')" title="Expand revenue breakdown">▶</button><strong>Revenue</strong></td>
+            <td class="num">$55,653</td><td class="num">$78,534</td><td class="num">$81,594</td><td class="num">$104,884</td><td class="num">$81,741</td><td class="num">$88,825</td><td class="num">$88,558</td><td class="num">$84,847</td><td class="num">$78,869</td><td class="num">$52,436</td><td class="num">$79,799</td><td class="num">$111,576</td>
+            <td class="num">$50,139</td>
+            <td class="num" style="color:var(--blue)"><strong>$982K</strong></td>
+          </tr>
+          <tr class="plsub plsub-rev" style="display:none">
+            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Client Revenue</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">$31,532</td><td class="num" style="color:rgba(255,255,255,0.45)">$49,167</td><td class="num" style="color:rgba(255,255,255,0.45)">$53,783</td><td class="num" style="color:rgba(255,255,255,0.45)">$74,682</td><td class="num" style="color:rgba(255,255,255,0.45)">$65,465</td><td class="num" style="color:rgba(255,255,255,0.45)">$61,407</td><td class="num" style="color:rgba(255,255,255,0.45)">$65,870</td><td class="num" style="color:rgba(255,255,255,0.45)">$56,297</td><td class="num" style="color:rgba(255,255,255,0.45)">$58,238</td><td class="num" style="color:rgba(255,255,255,0.45)">$21,453</td><td class="num" style="color:rgba(255,255,255,0.45)">$57,867</td><td class="num" style="color:rgba(255,255,255,0.45)">$91,613</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">$35,277</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">$691K</td>
+          </tr>
+          <tr class="plsub plsub-rev" style="display:none">
+            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Candidate Revenue</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">$23,422</td><td class="num" style="color:rgba(255,255,255,0.45)">$27,924</td><td class="num" style="color:rgba(255,255,255,0.45)">$27,731</td><td class="num" style="color:rgba(255,255,255,0.45)">$23,377</td><td class="num" style="color:rgba(255,255,255,0.45)">$19,805</td><td class="num" style="color:rgba(255,255,255,0.45)">$25,805</td><td class="num" style="color:rgba(255,255,255,0.45)">$25,649</td><td class="num" style="color:rgba(255,255,255,0.45)">$30,556</td><td class="num" style="color:rgba(255,255,255,0.45)">$21,514</td><td class="num" style="color:rgba(255,255,255,0.45)">$30,982</td><td class="num" style="color:rgba(255,255,255,0.45)">$23,516</td><td class="num" style="color:rgba(255,255,255,0.45)">$19,964</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">$14,862</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">$292K</td>
+          </tr>
+          <tr class="plsub plsub-rev" style="display:none">
+            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Placement & Referral</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">$699</td><td class="num" style="color:rgba(255,255,255,0.45)">$1,443</td><td class="num" style="color:rgba(255,255,255,0.45)">$80</td><td class="num" style="color:rgba(255,255,255,0.45)">$6,825</td><td class="num" style="color:rgba(255,255,255,0.45)">$63</td><td class="num" style="color:rgba(255,255,255,0.45)">$1,882</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">$196</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">—</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">$10K</td>
+          </tr>
+          <tr class="plsub plsub-rev" style="display:none">
+            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Refunds</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,591</td><td class="num" style="color:rgba(255,255,255,0.45)">-$270</td><td class="num" style="color:rgba(255,255,255,0.45)">-$970</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$883</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,780</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">—</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$7K</td>
+          </tr>
+          <!-- COGS -->
+          <tr>
+            <td><button class="plbtn plbtn-cogs" onclick="togglePL('cogs')" title="Expand COGS breakdown">▶</button>COGS</td>
+            <td class="num" style="color:var(--red)">-$10,251</td><td class="num" style="color:var(--red)">-$11,550</td><td class="num" style="color:var(--red)">-$5,106</td><td class="num" style="color:var(--red)">-$8,002</td><td class="num" style="color:var(--red)">-$3,533</td><td class="num" style="color:var(--red)">-$8,179</td><td class="num" style="color:var(--red)">-$9,667</td><td class="num" style="color:var(--red)">-$8,774</td><td class="num" style="color:var(--red)">-$18,268</td><td class="num" style="color:var(--red)">-$10,640</td><td class="num" style="color:var(--red)">-$15,344</td><td class="num" style="color:var(--red)">-$17,069</td>
+            <td class="num" style="color:var(--red)">-$10,713</td>
+            <td class="num" style="color:var(--red)">-$127K</td>
+          </tr>
+          <tr class="plsub plsub-cogs" style="display:none">
+            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Talent Acquisition</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$1,734</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,157</td><td class="num" style="color:rgba(255,255,255,0.45)">-$900</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,301</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,800</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,498</td><td class="num" style="color:rgba(255,255,255,0.45)">-$7,217</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,119</td><td class="num" style="color:rgba(255,255,255,0.45)">-$5,711</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,759</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$7,210</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$40K</td>
+          </tr>
+          <tr class="plsub plsub-cogs" style="display:none">
+            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Customer Success Mgr</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$2,317</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,817</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,721</td><td class="num" style="color:rgba(255,255,255,0.45)">-$6,950</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,915</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,635</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,562</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,519</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,552</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,552</td><td class="num" style="color:rgba(255,255,255,0.45)">-$5,793</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$1,611</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$42K</td>
+          </tr>
+          <tr class="plsub plsub-cogs" style="display:none">
+            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Interviewers & Talent</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$1,668</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,626</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,136</td><td class="num" style="color:rgba(255,255,255,0.45)">-$329</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,289</td><td class="num" style="color:rgba(255,255,255,0.45)">-$730</td><td class="num" style="color:rgba(255,255,255,0.45)">-$390</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,342</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,111</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,861</td><td class="num" style="color:rgba(255,255,255,0.45)">-$5,182</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,117</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$1,892</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$26K</td>
+          </tr>
+          <tr class="plsub plsub-cogs" style="display:none">
+            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Freelancers</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$3,412</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,753</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$922</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,244</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,233</td><td class="num" style="color:rgba(255,255,255,0.45)">-$892</td><td class="num" style="color:rgba(255,255,255,0.45)">-$73</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,840</td><td class="num" style="color:rgba(255,255,255,0.45)">-$108</td><td class="num" style="color:rgba(255,255,255,0.45)">-$649</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,400</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">—</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$15K</td>
+          </tr>
+          <tr class="plsub plsub-cogs" style="display:none">
+            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Referral Fees</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$1,000</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$250</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,950</td><td class="num" style="color:rgba(255,255,255,0.45)">-$300</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,581</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$250</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">—</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$4K</td>
+          </tr>
+          <!-- GROSS PROFIT -->
+          <tr style="background:rgba(34,197,94,0.04)">
+            <td style="padding-left:20px"><strong>Gross Profit</strong></td>
+            <td class="num">$45,402</td><td class="num">$66,984</td><td class="num">$76,488</td><td class="num">$96,882</td><td class="num">$78,208</td><td class="num">$80,646</td><td class="num">$78,891</td><td class="num">$76,073</td><td class="num">$60,601</td><td class="num">$41,796</td><td class="num">$64,455</td><td class="num">$94,507</td>
+            <td class="num">$39,426</td>
+            <td class="num" style="color:var(--green)"><strong>$855K</strong></td>
+          </tr>
+          <!-- OPEX -->
+          <tr>
+            <td><button class="plbtn plbtn-opex" onclick="togglePL('opex')" title="Expand OpEx breakdown">▶</button>OpEx</td>
+            <td class="num" style="color:var(--red)">-$23,471</td><td class="num" style="color:var(--red)">-$14,379</td><td class="num" style="color:var(--red)">-$33,822</td><td class="num" style="color:var(--red)">-$24,371</td><td class="num" style="color:var(--red)">-$22,291</td><td class="num" style="color:var(--red)">-$33,564</td><td class="num" style="color:var(--red)">-$26,937</td><td class="num" style="color:var(--red)">-$44,522</td><td class="num" style="color:var(--red)">-$25,642</td><td class="num" style="color:var(--red)">-$12,145</td><td class="num" style="color:var(--red)">-$8,569</td><td class="num" style="color:var(--red)">-$14,870</td>
+            <td class="num" style="color:var(--red)">-$18,254</td>
+            <td class="num" style="color:var(--red)">-$279K</td>
+          </tr>
+          <tr class="plsub plsub-opex" style="display:none">
+            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Software & Subscriptions</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$2,270</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,676</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,391</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,948</td><td class="num" style="color:rgba(255,255,255,0.45)">-$5,902</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,322</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,471</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,379</td><td class="num" style="color:rgba(255,255,255,0.45)">-$5,656</td><td class="num" style="color:rgba(255,255,255,0.45)">-$6,048</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,714</td><td class="num" style="color:rgba(255,255,255,0.45)">-$6,464</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$5,671</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$57K</td>
+          </tr>
+          <tr class="plsub plsub-opex" style="display:none">
+            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Recruit. Software</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$7,348</td><td class="num" style="color:rgba(255,255,255,0.45)">-$7,087</td><td class="num" style="color:rgba(255,255,255,0.45)">-$24,971</td><td class="num" style="color:rgba(255,255,255,0.45)">-$11,059</td><td class="num" style="color:rgba(255,255,255,0.45)">-$7,367</td><td class="num" style="color:rgba(255,255,255,0.45)">-$15,091</td><td class="num" style="color:rgba(255,255,255,0.45)">-$10,860</td><td class="num" style="color:rgba(255,255,255,0.45)">-$9,712</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,653</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">—</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$91K</td>
+          </tr>
+          <tr class="plsub plsub-opex" style="display:none">
+            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Stripe Fees</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$1,476</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,262</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,594</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,145</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,078</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,203</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,890</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,249</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,185</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,707</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,743</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,031</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$1,407</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$30K</td>
+          </tr>
+          <tr class="plsub plsub-opex" style="display:none">
+            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Ads</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$1,167</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$413</td><td class="num" style="color:rgba(255,255,255,0.45)">-$323</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,074</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,356</td><td class="num" style="color:rgba(255,255,255,0.45)">-$52</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,498</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,637</td><td class="num" style="color:rgba(255,255,255,0.45)">-$872</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,820</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$2,405</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$13K</td>
+          </tr>
+          <tr class="plsub plsub-opex" style="display:none">
+            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Travel</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$9,870</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$115</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,026</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,443</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,684</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,950</td><td class="num" style="color:rgba(255,255,255,0.45)">-$11,773</td><td class="num" style="color:rgba(255,255,255,0.45)">-$540</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">—</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$27K</td>
+          </tr>
+          <tr class="plsub plsub-opex" style="display:none">
+            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Other</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$1,340</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,354</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,751</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,780</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,178</td><td class="num" style="color:rgba(255,255,255,0.45)">-$5,190</td><td class="num" style="color:rgba(255,255,255,0.45)">-$5,410</td><td class="num" style="color:rgba(255,255,255,0.45)">-$16,357</td><td class="num" style="color:rgba(255,255,255,0.45)">-$10,110</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,753</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,240</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,555</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$8,771</td>
+            <td class="num" style="color:rgba(255,255,255,0.45)">-$61K</td>
+          </tr>
+          <!-- OPERATING INCOME -->
+          <tr class="grand-total">
+            <td style="padding-left:20px">Operating Income</td>
+            <td class="num">$21,932</td><td class="num">$52,605</td><td class="num">$42,667</td><td class="num">$72,511</td><td class="num">$55,917</td><td class="num">$47,082</td><td class="num">$51,955</td><td class="num">$31,551</td><td class="num">$34,959</td><td class="num">$29,651</td><td class="num">$55,885</td><td class="num">$79,638</td>
+            <td class="num">$21,172</td>
+            <td class="num" style="color:var(--green)"><strong>$576K</strong></td>
+          </tr>
+          <!-- MARGINS -->
+          <tr>
+            <td style="color:var(--muted);padding-left:20px">Gross Margin</td>
+            <td class="num">81.6%</td><td class="num">85.3%</td><td class="num">93.7%</td><td class="num">92.4%</td><td class="num">95.7%</td><td class="num">90.8%</td><td class="num">89.1%</td><td class="num">89.7%</td><td class="num">76.9%</td><td class="num">79.7%</td><td class="num">80.8%</td><td class="num">84.7%</td>
+            <td class="num">78.6%</td>
+            <td class="num" style="color:var(--green)">86.4% avg</td>
+          </tr>
+          <tr>
+            <td style="color:var(--muted);padding-left:20px">Op. Margin</td>
+            <td class="num">39.4%</td><td class="num">67.0%</td><td class="num">52.3%</td><td class="num">69.1%</td><td class="num">68.4%</td><td class="num">53.0%</td><td class="num">58.7%</td><td class="num">37.2%</td><td class="num">44.3%</td><td class="num">56.6%</td><td class="num">70.0%</td><td class="num">71.4%</td>
+            <td class="num">42.2%</td>
+            <td class="num" style="color:var(--green)">57.5% avg</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════ RECEIVABLES ══ -->
+<div id="receivables" class="page">
+
+  <div class="kpi-grid-3 gap">
+    <div class="kpi">
+      <div class="label">Total AR Outstanding</div>
+      <div class="value" style="color:var(--amber)">$34,040</div>
+      <div class="delta down">▼ 8 open invoices</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Overdue 60+ Days</div>
+      <div class="value" style="color:var(--red)">$1,200</div>
+      <div class="delta down">▼ Flow Neuroscience · 90 days</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Write-offs (TTM)</div>
+      <div class="value">$2,000</div>
+      <div class="delta">2 invoices · Flow Neuroscience</div>
+    </div>
+  </div>
+
+  <div class="grid-12 gap">
+    <div class="panel" style="display:flex;flex-direction:column;gap:20px;align-self:start">
+      <div>
+        <h2>AR Aging</h2>
+        <p class="sub">Outstanding by days overdue</p>
+        <div class="donut-wrap" style="width:120px;height:120px;margin-top:10px">
+          <canvas id="arAgingDonut"></canvas>
+          <div class="donut-label"><div class="dl-val">$34K</div><div class="dl-sub">Open AR</div></div>
+        </div>
+        <div class="legend-row" style="justify-content:center;margin-top:12px;flex-direction:column;align-items:center;gap:6px">
+          <span><span class="legend-dot" style="background:var(--green)"></span>0–30 days · $5,120 (15%)</span>
+          <span><span class="legend-dot" style="background:var(--amber)"></span>31–60 days · $27,720 (81%)</span>
+          <span><span class="legend-dot" style="background:var(--red)"></span>61–90+ days · $1,200 (4%)</span>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px">Aging Bands</div>
+        <div class="ar-aging-row">
+          <div class="ar-aging-label" style="color:var(--green)">0–30 d</div>
+          <div class="ar-aging-bar-bg"><div class="ar-aging-bar-fill" style="width:15%;background:var(--green)"></div></div>
+          <div class="ar-aging-val">$5,120</div>
+        </div>
+        <div class="ar-aging-row">
+          <div class="ar-aging-label" style="color:var(--amber)">31–60 d</div>
+          <div class="ar-aging-bar-bg"><div class="ar-aging-bar-fill" style="width:81%;background:var(--amber)"></div></div>
+          <div class="ar-aging-val">$27,720</div>
+        </div>
+        <div class="ar-aging-row">
+          <div class="ar-aging-label" style="color:var(--red)">61–90+ d</div>
+          <div class="ar-aging-bar-bg"><div class="ar-aging-bar-fill" style="width:4%;background:var(--red)"></div></div>
+          <div class="ar-aging-val">$1,200</div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Open Invoices</h2>
+      <p class="sub">All unpaid and overdue invoices as of Mar 2026</p>
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr>
+            <th>Customer</th>
+            <th>Type</th>
+            <th class="num">Invoice Date</th>
+            <th class="num">Days Overdue</th>
+            <th class="num" style="min-width:120px;padding-right:16px">Amount</th>
+            <th style="padding-left:16px">Status</th>
+          </tr></thead>
+          <tbody>
+            <tr>
+              <td>Flow Neuroscience AB</td>
+              <td><span style="font-size:11px;color:var(--muted)">—</span></td>
+              <td class="num" style="color:var(--muted)">Dec 2025</td>
+              <td class="num" style="color:var(--red)">90</td>
+              <td class="num" style="padding-right:16px"><span class="amt-value" style="color:var(--red)">$1,200</span></td>
+              <td style="padding-left:16px"><span class="pill lost">Unpaid</span></td>
+            </tr>
+            <tr>
+              <td>Madhappy</td>
+              <td><span style="font-size:11px;color:var(--muted)">Upfront Project</span></td>
+              <td class="num" style="color:var(--muted)">Jan 2026</td>
+              <td class="num" style="color:var(--amber)">57</td>
+              <td class="num" style="padding-right:16px"><span class="amt-value" style="color:var(--amber)">$2,000</span></td>
+              <td style="padding-left:16px"><span class="pill warn">Unpaid</span></td>
+            </tr>
+            <tr>
+              <td>Travel + Leisure</td>
+              <td><span style="font-size:11px;color:var(--muted)">—</span></td>
+              <td class="num" style="color:var(--muted)">Jan 2026</td>
+              <td class="num" style="color:var(--amber)">56</td>
+              <td class="num" style="padding-right:16px"><span class="amt-value" style="color:var(--amber)">$6,400</span></td>
+              <td style="padding-left:16px"><span class="pill warn">Unpaid</span></td>
+            </tr>
+            <tr>
+              <td>Peppertux</td>
+              <td><span style="font-size:11px;color:var(--muted)">—</span></td>
+              <td class="num" style="color:var(--muted)">Jan 2026</td>
+              <td class="num" style="color:var(--amber)">55</td>
+              <td class="num" style="padding-right:16px"><span class="amt-value" style="color:var(--amber)">$3,200</span></td>
+              <td style="padding-left:16px"><span class="pill warn">Unpaid</span></td>
+            </tr>
+            <tr>
+              <td>BeautyStat</td>
+              <td><span style="font-size:11px;color:var(--muted)">—</span></td>
+              <td class="num" style="color:var(--muted)">Jan 2026</td>
+              <td class="num" style="color:var(--amber)">49</td>
+              <td class="num" style="padding-right:16px"><span class="amt-value" style="color:var(--amber)">$14,680</span></td>
+              <td style="padding-left:16px"><span class="pill warn">Unpaid</span></td>
+            </tr>
+            <tr>
+              <td>Flow Neuroscience AB</td>
+              <td><span style="font-size:11px;color:var(--muted)">—</span></td>
+              <td class="num" style="color:var(--muted)">Feb 2026</td>
+              <td class="num" style="color:var(--amber)">43</td>
+              <td class="num" style="padding-right:16px"><span class="amt-value" style="color:var(--amber)">$800</span></td>
+              <td style="padding-left:16px"><span class="pill warn">Unpaid</span></td>
+            </tr>
+            <tr>
+              <td>Flow Neuroscience AB</td>
+              <td><span style="font-size:11px;color:var(--muted)">—</span></td>
+              <td class="num" style="color:var(--muted)">Feb 2026</td>
+              <td class="num" style="color:var(--amber)">43</td>
+              <td class="num" style="padding-right:16px"><span class="amt-value" style="color:var(--amber)">$640</span></td>
+              <td style="padding-left:16px"><span class="pill warn">Unpaid</span></td>
+            </tr>
+            <tr>
+              <td>Tiege Hanley</td>
+              <td><span style="font-size:11px;color:var(--muted)">Retainer</span></td>
+              <td class="num" style="color:var(--muted)">Mar 2026</td>
+              <td class="num" style="color:var(--green)">25</td>
+              <td class="num" style="padding-right:16px"><span class="amt-value" style="color:var(--blue)">$5,120</span></td>
+              <td style="padding-left:16px"><span class="pill info">In Process</span></td>
+            </tr>
+            <tr class="grand-total">
+              <td colspan="4"><strong>Total Outstanding</strong></td>
+              <td class="num"><span class="amt-value">$34,040</span></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="margin-top:20px;border-top:1px solid var(--card-border);padding-top:14px">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px">Write-offs (TTM)</div>
+        <table>
+          <thead><tr><th>Customer</th><th>Invoice</th><th class="num">Amount</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Flow Neuroscience AB</td>
+              <td style="color:var(--muted);font-size:12px">IRP6LRJD-0003</td>
+              <td class="num" style="color:var(--muted)">$800</td>
+              <td><span class="pill wo">Write Off</span></td>
+            </tr>
+            <tr>
+              <td>Flow Neuroscience AB</td>
+              <td style="color:var(--muted);font-size:12px">IRP6LRJD-0005</td>
+              <td class="num" style="color:var(--muted)">$1,200</td>
+              <td><span class="pill wo">Write Off</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+Chart.defaults.color = 'rgba(255,255,255,0.65)';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+Chart.defaults.font.family = "'DM Sans', system-ui, sans-serif";
+Chart.defaults.animation = false;
+
+// ── Data globals (populated from /api/data) ──────────────
+let MONTHS = [];
+let PERIOD_LABELS = [];
+let clientRev = [], candidateRev = [], totalRev = [];
+let activeClients90d = [];
+let operatingInc = [], grossMargin = [], opMargin = [];
+let cogs = [], opex = [];
+let cogsTalent = [], cogsCSM = [], cogsInt = [], cogsFreel = [], cogsRef = [];
+let opexSoftware = [], opexRecruit = [], opexStripe = [], opexAds = [], opexTravel = [], opexOther = [];
+
+const fmtK = v => '$'+(v/1000).toFixed(0)+'k';
+const fmtAmt = v => '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+Chart.register(ChartDataLabels);
+
+// ── Lazy chart system
+const chartRegistry = {};
+const chartFactories = {};
+const tabCharts = { revenue: [], expenses: [], financials: [], receivables: [] };
+
+function defChart(tabId, chartId, configFn) {
+  tabCharts[tabId].push(chartId);
+  chartFactories[chartId] = configFn;
+}
+
+function buildCharts(tabId) {
+  (tabCharts[tabId] || []).forEach(id => {
+    if (!chartRegistry[id]) {
+      const el = document.getElementById(id);
+      if (el) chartRegistry[id] = new Chart(el, chartFactories[id]());
+    }
+  });
+}
+
+function showTab(btn, id) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(id).classList.add('active');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    buildCharts(id);
+    Object.values(chartRegistry).forEach(c => c.resize());
+  }));
+}
+
+
+// ── Filter & Insights system ───────────────────────────
+let MOM_DATA = { months: [], revenue: [], expenses: [] };
+const filterState = { period: 12, rangeStart: 0, rangeEnd: 12 };
+
+function fmtUSD(v) {
+  if (Math.abs(v) >= 1000) return '$' + (v/1000).toFixed(1) + 'K';
+  return '$' + Math.round(v).toLocaleString();
+}
+function fmtPct(v) { return (v >= 0 ? '' : '') + v.toFixed(1) + '%'; }
+
+function periodLabel(i) { return PERIOD_LABELS[i] || ''; }
+function periodShort(i) { return MONTHS[i] || ''; }
+
+// ── Render MoM Revenue table ───────────────────────────
+function renderMomRev() {
+  const tbl = document.getElementById('momRevTbl');
+  if (!tbl) return;
+  const search = (document.getElementById('momRevSearch').value || '').toLowerCase().trim();
+  const typeF  = document.getElementById('momRevType').value;
+  const s = filterState.rangeStart, e = filterState.rangeEnd;
+
+  let rows = MOM_DATA.revenue.slice();
+  if (typeF)  rows = rows.filter(r => r.type === typeF);
+  if (search) rows = rows.filter(r => r.name.toLowerCase().includes(search));
+
+  // Recompute total within range
+  rows.forEach(r => {
+    r._rangeTotal = 0;
+    for (let i = s; i <= e; i++) r._rangeTotal += r.months[i] || 0;
+  });
+  rows.sort((a,b) => b._rangeTotal - a._rangeTotal);
+
+  const grandTotal = rows.reduce((a,b)=>a+b._rangeTotal,0);
+  document.getElementById('momRevCount').textContent =
+    rows.length.toLocaleString() + ' clients · range total ' + fmtUSD(grandTotal);
+
+  // Build header
+  let thead = '<thead><tr><th class="col-frozen">Client</th><th>Type</th><th class="num">LTV (range)</th>';
+  for (let i = s; i <= e; i++) thead += `<th class="num">${MOM_DATA.months[i]}</th>`;
+  thead += '</tr></thead>';
+
+  // Limit display to first 200 rows for perf
+  const displayRows = rows.slice(0, 200);
+  let body = '<tbody>';
+  for (const r of displayRows) {
+    body += `<tr><td class="col-frozen">${escapeHtml(r.name)}</td><td style="font-size:11px;color:var(--muted)">${r.type}</td>`;
+    body += `<td class="num"><b>${fmtUSD(r._rangeTotal)}</b></td>`;
+    for (let i = s; i <= e; i++) {
+      const v = r.months[i] || 0;
+      body += `<td class="num ${v ? 'cell-pos' : 'cell-zero'}">${v ? fmtUSD(v) : '—'}</td>`;
+    }
+    body += '</tr>';
+  }
+  body += '</tbody>';
+
+  // Footer with column totals
+  let foot = '<tfoot><tr><td class="col-frozen">TOTAL</td><td>—</td>';
+  foot += `<td class="num">${fmtUSD(grandTotal)}</td>`;
+  for (let i = s; i <= e; i++) {
+    let colTot = 0;
+    for (const r of rows) colTot += r.months[i] || 0;
+    foot += `<td class="num">${fmtUSD(colTot)}</td>`;
+  }
+  foot += '</tr></tfoot>';
+
+  tbl.innerHTML = thead + body + foot;
+}
+
+// ── Render MoM Expenses table ───────────────────────────
+function renderMomExp() {
+  const tbl = document.getElementById('momExpTbl');
+  if (!tbl) return;
+  const search = (document.getElementById('momExpSearch').value || '').toLowerCase().trim();
+  const catF   = document.getElementById('momExpCat').value;
+  const s = filterState.rangeStart, e = filterState.rangeEnd;
+
+  let rows = MOM_DATA.expenses.slice();
+  if (catF)   rows = rows.filter(r => r.category === catF);
+  if (search) rows = rows.filter(r => r.vendor.toLowerCase().includes(search));
+
+  rows.forEach(r => {
+    r._rangeTotal = 0;
+    for (let i = s; i <= e; i++) r._rangeTotal += r.months[i] || 0;
+  });
+  rows.sort((a,b) => b._rangeTotal - a._rangeTotal);
+
+  const grandTotal = rows.reduce((a,b)=>a+b._rangeTotal,0);
+  document.getElementById('momExpCount').textContent =
+    rows.length.toLocaleString() + ' vendors · range total ' + fmtUSD(grandTotal);
+
+  let thead = '<thead><tr><th class="col-frozen">Vendor</th><th>Category</th><th class="num">Total (range)</th>';
+  for (let i = s; i <= e; i++) thead += `<th class="num">${MOM_DATA.months[i]}</th>`;
+  thead += '</tr></thead>';
+
+  const displayRows = rows.slice(0, 200);
+  let body = '<tbody>';
+  for (const r of displayRows) {
+    body += `<tr><td class="col-frozen">${escapeHtml(r.vendor)}</td><td style="font-size:11px;color:var(--muted)">${escapeHtml(r.category)}</td>`;
+    body += `<td class="num"><b>${fmtUSD(r._rangeTotal)}</b></td>`;
+    for (let i = s; i <= e; i++) {
+      const v = r.months[i] || 0;
+      body += `<td class="num ${v ? 'cell-pos' : 'cell-zero'}">${v ? fmtUSD(v) : '—'}</td>`;
+    }
+    body += '</tr>';
+  }
+  body += '</tbody>';
+
+  let foot = '<tfoot><tr><td class="col-frozen">TOTAL</td><td>—</td>';
+  foot += `<td class="num">${fmtUSD(grandTotal)}</td>`;
+  for (let i = s; i <= e; i++) {
+    let colTot = 0;
+    for (const r of rows) colTot += r.months[i] || 0;
+    foot += `<td class="num">${fmtUSD(colTot)}</td>`;
+  }
+  foot += '</tr></tfoot>';
+
+  tbl.innerHTML = thead + body + foot;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ── KPI updates from period ────────────────────────────
+function updateKPIs() {
+  const p = filterState.period;
+  const pl = periodLabel(p);
+  const ps = periodShort(p);
+
+  // Revenue tab
+  const rev = totalRev[p] || 0;
+  const revPrior = p > 0 ? (totalRev[p-1] || 0) : 0;
+  const revDelta = revPrior > 0 ? ((rev - revPrior) / revPrior * 100) : 0;
+  setText('kpiRevPeriodLabel', pl + ' Revenue');
+  setText('kpiRevPeriod', fmtUSD(rev));
+  // Active Clients (trailing 90d ending at selected period)
+  if (typeof activeClients90d !== 'undefined') {
+    setText('kpiActiveClientsLabel', 'Active Clients (90d ending ' + ps + ')');
+    setText('kpiActiveClients', String(activeClients90d[p] || 0));
+  }
+  const deltaEl = document.getElementById('kpiRevPeriodDelta');
+  if (deltaEl) {
+    deltaEl.className = 'delta ' + (revDelta >= 0 ? 'up' : 'down');
+    deltaEl.textContent = (revDelta >= 0 ? '▲ +' : '▼ ') + revDelta.toFixed(1) + '% vs ' + (MONTHS[p-1] || 'prior');
+  }
+
+  // Expenses tab
+  const cogsV = cogs[p] || 0;
+  const opexV = opex[p] || 0;
+  const cogsPct = rev > 0 ? (cogsV/rev*100).toFixed(1) : '0';
+  const opexPct = rev > 0 ? (opexV/rev*100).toFixed(1) : '0';
+  setText('kpiCOGSLabel', 'COGS (' + ps + ')');
+  setText('kpiCOGS', fmtUSD(cogsV));
+  setText('kpiCOGSDelta', cogsPct + '% of revenue');
+  setText('kpiOpExLabel', 'OpEx (' + ps + ')');
+  setText('kpiOpEx', fmtUSD(opexV));
+  setText('kpiOpExDelta', opexPct + '% of revenue');
+  // Total Expenses (period-driven)
+  const totExp = cogsV + opexV;
+  const totExpPct = rev > 0 ? (totExp/rev*100).toFixed(1) : '0';
+  setText('kpiExpTotalLabel', 'Total Expenses (' + ps + ')');
+  setText('kpiExpTotal', fmtUSD(totExp));
+  setText('kpiExpTotalSub', totExpPct + '% of revenue · COGS + OpEx');
+  // Top Vendor (period-driven)
+  setText('kpiTopVendorLabel', 'Top Vendor (' + ps + ')');
+  if (typeof MOM_DATA !== 'undefined' && MOM_DATA && MOM_DATA.expenses) {
+    let bestV = 0, bestVendor = '—', bestCat = '';
+    for (const r of MOM_DATA.expenses) {
+      const v = (r.months && r.months[p]) || 0;
+      if (v > bestV) { bestV = v; bestVendor = r.vendor; bestCat = r.category; }
+    }
+    setText('kpiTopVendor', bestVendor);
+    setText('kpiTopVendorSub', bestV > 0 ? (fmtUSD(bestV) + ' · ' + bestCat) : 'No vendor activity');
+  }
+
+  // Financials tab
+  const opInc = operatingInc[p] || 0;
+  const gm = grossMargin[p] || 0;
+  const om = opMargin[p] || 0;
+  setText('kpiOpIncLabel', 'Operating Income (' + ps + ')');
+  setText('kpiOpInc', fmtUSD(opInc));
+  setText('kpiOpIncSub', om.toFixed(1) + '% margin');
+  setText('kpiOpMargin', om.toFixed(1) + '%');
+  setText('kpiGrossMargin', gm.toFixed(1) + '%');
+  setText('kpiNetMargin', om.toFixed(1) + '%');
+}
+
+function setText(id, txt) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = txt;
+}
+
+// ── Insights generation ───────────────────────────────
+function renderInsights() {
+  const p = filterState.period;
+  const ps = periodShort(p);
+  const s = filterState.rangeStart, e = filterState.rangeEnd;
+
+  // Revenue insights
+  const revInsights = [];
+  const rev = totalRev[p];
+  const om = opMargin[p];
+  const gm = grossMargin[p];
+
+  if (p > 0) {
+    const dRev = ((rev - totalRev[p-1]) / totalRev[p-1] * 100);
+    if (dRev >= 5) {
+      revInsights.push({ icon: 'good', text: `Revenue up <b>+${dRev.toFixed(1)}%</b> vs prior month — momentum holding.` });
+    } else if (dRev <= -10) {
+      revInsights.push({ icon: 'bad', text: `Revenue down <b>${dRev.toFixed(1)}%</b> vs prior month — investigate pipeline.` });
+    } else {
+      revInsights.push({ icon: 'neu', text: `Revenue ${dRev >= 0 ? '+' : ''}${dRev.toFixed(1)}% vs prior month — relatively flat.` });
+    }
+  }
+
+  // Top client in period
+  const topClient = [...MOM_DATA.revenue]
+    .map(r => ({...r, periodVal: r.months[p] || 0}))
+    .filter(r => r.periodVal > 0)
+    .sort((a,b) => b.periodVal - a.periodVal)[0];
+  if (topClient) {
+    revInsights.push({ icon: 'good', text: `Top client this period: <b>${escapeHtml(topClient.name)}</b> at <b>${fmtUSD(topClient.periodVal)}</b>.` });
+  }
+
+  // Client/Candidate mix
+  const cR = clientRev[p] || 0;
+  const caR = candidateRev[p] || 0;
+  if (rev > 0) {
+    const cPct = (cR/rev*100).toFixed(0);
+    revInsights.push({ icon: 'neu', text: `Mix: <b>${cPct}% Client</b> / <b>${100-cPct}% Candidate</b> revenue this period.` });
+  }
+
+  // Active client count in period
+  const activeInPeriod = MOM_DATA.revenue.filter(r => r.months[p] > 0).length;
+  revInsights.push({ icon: 'neu', text: `<b>${activeInPeriod} unique clients</b> billed in ${ps}.` });
+
+  renderInsightBox('revInsights', ps, revInsights);
+
+  // Expense insights
+  const expInsights = [];
+  const totExp = (cogs[p] || 0) + (opex[p] || 0);
+  if (p > 0) {
+    const totExpPrior = (cogs[p-1] || 0) + (opex[p-1] || 0);
+    const dExp = ((totExp - totExpPrior) / totExpPrior * 100);
+    if (dExp >= 15) {
+      expInsights.push({ icon: 'bad', text: `Total expenses up <b>+${dExp.toFixed(1)}%</b> vs prior month — review.` });
+    } else if (dExp <= -10) {
+      expInsights.push({ icon: 'good', text: `Total expenses down <b>${dExp.toFixed(1)}%</b> vs prior month — efficiency improving.` });
+    } else {
+      expInsights.push({ icon: 'neu', text: `Total expenses ${dExp >= 0 ? '+' : ''}${dExp.toFixed(1)}% vs prior month.` });
+    }
+  }
+  // Largest expense category in period
+  const periodCats = {};
+  MOM_DATA.expenses.forEach(r => {
+    if (!periodCats[r.category]) periodCats[r.category] = 0;
+    periodCats[r.category] += r.months[p] || 0;
+  });
+  const topCat = Object.entries(periodCats).sort((a,b)=>b[1]-a[1])[0];
+  if (topCat && topCat[1] > 0) {
+    expInsights.push({ icon: 'warn', text: `Largest spend category: <b>${escapeHtml(topCat[0])}</b> at <b>${fmtUSD(topCat[1])}</b>.` });
+  }
+  // OpEx as % of revenue
+  if (rev > 0 && opex[p]) {
+    const oPct = (opex[p]/rev*100).toFixed(1);
+    expInsights.push({ icon: 'neu', text: `OpEx is <b>${oPct}%</b> of revenue this period.` });
+  }
+  renderInsightBox('expInsights', ps, expInsights);
+
+  // Financials insights
+  const finInsights = [];
+  if (om >= 50) {
+    finInsights.push({ icon: 'good', text: `Strong operating margin at <b>${om.toFixed(1)}%</b> — top-quartile profitability.` });
+  } else if (om >= 30) {
+    finInsights.push({ icon: 'good', text: `Healthy operating margin at <b>${om.toFixed(1)}%</b>.` });
+  } else if (om >= 0) {
+    finInsights.push({ icon: 'warn', text: `Operating margin compressed at <b>${om.toFixed(1)}%</b> — protect downside.` });
+  } else {
+    finInsights.push({ icon: 'bad', text: `Operating loss this period at <b>${om.toFixed(1)}%</b>.` });
+  }
+  if (gm < 80) {
+    finInsights.push({ icon: 'warn', text: `Gross margin <b>${gm.toFixed(1)}%</b> below TTM avg of 86.4% — COGS pressure.` });
+  } else {
+    finInsights.push({ icon: 'good', text: `Gross margin <b>${gm.toFixed(1)}%</b> in line with TTM avg.` });
+  }
+  // Best month in range
+  let bestIdx = s, bestRev = -Infinity;
+  for (let i = s; i <= e; i++) if (totalRev[i] > bestRev) { bestRev = totalRev[i]; bestIdx = i; }
+  finInsights.push({ icon: 'neu', text: `Best revenue month in range: <b>${MONTHS[bestIdx]}</b> at <b>${fmtUSD(bestRev)}</b>.` });
+  // Range total
+  let rangeRev = 0, rangeOpInc = 0;
+  for (let i = s; i <= e; i++) { rangeRev += totalRev[i] || 0; rangeOpInc += operatingInc[i] || 0; }
+  finInsights.push({ icon: 'neu', text: `Range total: <b>${fmtUSD(rangeRev)}</b> revenue · <b>${fmtUSD(rangeOpInc)}</b> operating income.` });
+  renderInsightBox('finInsights', ps, finInsights);
+}
+
+function renderInsightBox(id, periodShortLabel, items) {
+  const box = document.getElementById(id);
+  if (!box) return;
+  let html = `<span class="insights-pill">Insights</span><span class="insights-title">What to know · ${periodShortLabel}</span><div class="insights-list">`;
+  for (const it of items) {
+    const ico = it.icon === 'good' ? '✓' : it.icon === 'bad' ? '!' : it.icon === 'warn' ? '!' : '·';
+    html += `<div class="insights-row"><span class="ii ${it.icon}">${ico}</span><span>${it.text}</span></div>`;
+  }
+  html += '</div>';
+  box.innerHTML = html;
+}
+
+// ── Range slicing for charts ────────────────────────────
+function applyRangeToCharts() {
+  const s = filterState.rangeStart, e = filterState.rangeEnd;
+  const sliceArr = arr => arr.slice(s, e+1);
+  const sliceLabels = MONTHS.slice(s, e+1);
+
+  Object.entries(chartRegistry).forEach(([id, chart]) => {
+    if (!chart) return;
+    const cfg = chartFactories[id]();
+    chart.data.labels = sliceLabels;
+    cfg.data.datasets.forEach((ds, i) => {
+      const newData = sliceArr(ds.data);
+      chart.data.datasets[i].data = newData;
+    });
+    chart.update('none');
+  });
+}
+
+// ── Expense breakdown by category × month (sourced from spreadsheet P&L) ─
+let EXP_BY_CAT_PL = [];
+function renderExpCat() {
+  const m = filterState.period;
+  const monthName = MONTHS[m] || 'Apr 26';
+  const sub = document.getElementById('expCatSub');
+  if (sub) sub.textContent = 'Breakdown for ' + monthName + ' — change period at top to drill into another month';
+
+  const tbl = document.getElementById('expCatTbl');
+  if (!tbl) return;
+  const tbody = tbl.querySelector('tbody');
+  if (!tbody) return;
+
+  const rows = EXP_BY_CAT_PL.map(r => ({cat: r.cat, grp: r.grp, val: r.months[m] || 0}))
+                             .filter(r => Math.abs(r.val) > 0.5);
+  const cogsRows = rows.filter(r => r.grp === 'COGS').sort((a,b) => b.val - a.val);
+  const opexRows = rows.filter(r => r.grp === 'OpEx').sort((a,b) => b.val - a.val);
+  const allRows  = cogsRows.concat(opexRows);
+  const maxVal   = Math.max(1, ...allRows.map(r => Math.abs(r.val)));
+
+  const cogsTotal = cogsRows.reduce((s,r) => s + r.val, 0);
+  const opexTotal = opexRows.reduce((s,r) => s + r.val, 0);
+  const grandTotal = cogsTotal + opexTotal;
+
+  const fmtK = v => {
+    const a = Math.abs(v);
+    const sign = v < 0 ? '-' : '';
+    if (a >= 1000) return sign + '$' + (a/1000).toFixed(1).replace(/\.0$/,'') + 'K';
+    return sign + '$' + Math.round(a);
+  };
+
+  let html = '';
+  for (const r of allRows) {
+    const w = Math.max(2, Math.round(Math.abs(r.val) / maxVal * 80));
+    const barClass = r.grp === 'COGS' ? 'red' : 'amber';
+    const pillStyle = r.grp === 'COGS'
+      ? 'background:rgba(239,68,68,0.18);color:#ef4444'
+      : 'background:rgba(245,158,11,0.18);color:#f59e0b';
+    html += '<tr><td>' + escapeHtml(r.cat) + '</td>' +
+            '<td><span style="' + pillStyle + ';font-size:10px;padding:2px 7px;border-radius:4px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;display:inline-block">' + r.grp + '</span></td>' +
+            '<td class="num"><div class="cell-bar"><span>' + fmtK(r.val) + '</span>&nbsp;<span class="bar ' + barClass + '" style="width:' + w + 'px"></span></div></td></tr>';
+  }
+  if (cogsRows.length) {
+    html += '<tr style="border-top:1px solid rgba(255,255,255,0.12)"><td><b>COGS Subtotal</b></td><td></td><td class="num"><b>' + fmtK(cogsTotal) + '</b></td></tr>';
+  }
+  if (opexRows.length) {
+    html += '<tr><td><b>OpEx Subtotal</b></td><td></td><td class="num"><b>' + fmtK(opexTotal) + '</b></td></tr>';
+  }
+  html += '<tr class="grand-total"><td><b>Grand Total · ' + monthName + '</b></td><td></td><td class="num"><b>' + fmtK(grandTotal) + '</b></td></tr>';
+
+  tbody.innerHTML = html;
+}
+
+// ── Main filter apply ──────────────────────────────────
+function applyFilters() {
+  const periodEl = document.getElementById('fltPeriod');
+  const rsEl = document.getElementById('fltRangeStart');
+  const reEl = document.getElementById('fltRangeEnd');
+  if (periodEl) filterState.period = parseInt(periodEl.value);
+  if (rsEl) filterState.rangeStart = parseInt(rsEl.value);
+  if (reEl) filterState.rangeEnd = parseInt(reEl.value);
+  // Validate
+  if (filterState.rangeEnd < filterState.rangeStart) filterState.rangeEnd = filterState.rangeStart;
+
+  updateKPIs();
+  renderInsights();
+  renderMomRev();
+  renderMomExp();
+  renderExpCat();
+  applyRangeToCharts();
+}
+
+
+async function loadData() {
+  const overlay = document.getElementById('loading-overlay');
+  try {
+    const res = await fetch('/api/data', { cache: 'no-store' });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`API ${res.status}: ${errText}`);
+    }
+    const D = await res.json();
+    applyData(D);
+    if (overlay) overlay.style.display = 'none';
+    buildCharts('financials');
+    renderRevTxns();
+    renderExpTxns();
+    applyFilters();
+  } catch (err) {
+    console.error('Failed to load dashboard data:', err);
+    if (overlay) {
+      overlay.innerHTML = `
+        <div style="text-align:center;max-width:520px;padding:32px">
+          <div style="font-family:'Anton',sans-serif;font-size:22px;letter-spacing:1px;color:#ef4444;margin-bottom:14px">DATA LOAD FAILED</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:13px;line-height:1.6;margin-bottom:20px">
+            ${err.message}
+          </div>
+          <div style="color:rgba(255,255,255,0.5);font-size:12px">
+            Check that <code>GOOGLE_SERVICE_ACCOUNT_JSON</code> is set in Vercel env vars and that the service account has read access to the spreadsheet.
+          </div>
+          <button onclick="loadData()" style="margin-top:20px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;padding:8px 16px;border-radius:6px;cursor:pointer;font-family:'DM Sans'">↻ Retry</button>
+        </div>`;
+    }
+  }
+}
+
+function applyData(D) {
+  MONTHS = D.months || [];
+  PERIOD_LABELS = D.PERIOD_LABELS || [];
+  clientRev = D.clientRev || [];
+  candidateRev = D.candidateRev || [];
+  totalRev = D.totalRev || [];
+  activeClients90d = D.activeClients90d || [];
+  operatingInc = D.operatingInc || [];
+  grossMargin = D.grossMargin || [];
+  opMargin = D.opMargin || [];
+  cogs = D.cogs || [];
+  opex = D.opex || [];
+  cogsTalent = D.cogsTalent || [];
+  cogsCSM = D.cogsCSM || [];
+  cogsInt = D.cogsInt || [];
+  cogsFreel = D.cogsFreel || [];
+  cogsRef = D.cogsRef || [];
+  opexSoftware = D.opexSoftware || [];
+  opexRecruit = D.opexRecruit || [];
+  opexStripe = D.opexStripe || [];
+  opexAds = D.opexAds || [];
+  opexTravel = D.opexTravel || [];
+  opexOther = D.opexOther || [];
+  EXP_BY_CAT_PL = D.EXP_BY_CAT_PL || [];
+  MOM_DATA = D.MOM_DATA || { months: [], revenue: [], expenses: [] };
+  REV_TXNS = D.REV_TXNS || [];
+  EXP_TXNS = D.EXP_TXNS || [];
+  rebuildFilterDropdowns();
+  rebuildStaticKPIs();
+}
+
+function rebuildFilterDropdowns() {
+  const lastIdx = MONTHS.length - 1;
+  const buildOpts = (selectedIdx) =>
+    MONTHS.map((m, i) => `<option value="${i}"${i === selectedIdx ? ' selected' : ''}>${m}</option>`).join('');
+  const periodEl = document.getElementById('fltPeriod');
+  const rangeStartEl = document.getElementById('fltRangeStart');
+  const rangeEndEl = document.getElementById('fltRangeEnd');
+  if (periodEl) periodEl.innerHTML = buildOpts(lastIdx);
+  if (rangeStartEl) rangeStartEl.innerHTML = buildOpts(0);
+  if (rangeEndEl) rangeEndEl.innerHTML = buildOpts(lastIdx);
+  filterState.period = lastIdx;
+  filterState.rangeStart = 0;
+  filterState.rangeEnd = lastIdx;
+}
+
+function rebuildStaticKPIs() {
+  // TTM Revenue + Revenue Mix labels — computed from last 12 months of data
+  const n = MONTHS.length;
+  const start = Math.max(0, n - 12);
+  let ttmRev = 0, ttmClient = 0, ttmCand = 0;
+  for (let i = start; i < n; i++) {
+    ttmRev += totalRev[i] || 0;
+    ttmClient += clientRev[i] || 0;
+    ttmCand += candidateRev[i] || 0;
+  }
+  const ttmLabelEl = document.querySelector('.period-badge');
+  if (ttmLabelEl && n > 0) ttmLabelEl.textContent = `TTM: ${MONTHS[start]} – ${MONTHS[n-1]}`;
+  const fmtBig = v => v >= 1e6 ? '$' + (v/1e6).toFixed(2) + 'M' : '$' + Math.round(v/1000) + 'K';
+  setText('kpiRevTTM', fmtBig(ttmRev));
+  setText('kpiRevTTMSub', n > 0 ? `${MONTHS[start]} – ${MONTHS[n-1]}` : '');
+  // Donut + legend
+  const donutValEl = document.querySelector('.donut-label .dl-val');
+  if (donutValEl) donutValEl.textContent = fmtBig(ttmRev);
+  const clientPct = ttmRev > 0 ? Math.round(ttmClient / ttmRev * 100) : 0;
+  const candPct = 100 - clientPct;
+  const legendRow = document.querySelector('.legend-row');
+  if (legendRow) {
+    legendRow.innerHTML = `<span><span class="legend-dot" style="background:var(--blue)"></span>Client ${clientPct}%</span>` +
+                          `<span><span class="legend-dot" style="background:var(--green)"></span>Candidate ${candPct}%</span>`;
+  }
+  document.querySelectorAll('.stat-item .sl').forEach(el => {
+    if (el.textContent.includes('Client Revenue')) {
+      const sv = el.nextElementSibling;
+      if (sv) sv.textContent = fmtBig(ttmClient);
+    }
+    if (el.textContent.includes('Candidate Revenue')) {
+      const sv = el.nextElementSibling;
+      if (sv) sv.textContent = fmtBig(ttmCand);
+    }
+  });
+  // Avg Client Invoice / Avg Deal Size — compute from MOM_DATA client revenue transactions
+  const clientRevEntries = (MOM_DATA.revenue || []).filter(r => r.type === 'Client Revenue');
+  const ltvTotal = clientRevEntries.reduce((s, r) => s + r.total, 0);
+  const uniqueClients = clientRevEntries.length;
+  // Avg invoice — total ÷ count of individual invoice transactions
+  const invoiceCount = REV_TXNS.filter(t => t[2] === 'Client Revenue' && t[3] > 0).length;
+  const avgInvoice = invoiceCount > 0 ? Math.round(ltvTotal / invoiceCount) : 0;
+  setText('kpiAvgDeal', '$' + avgInvoice.toLocaleString());
+  document.querySelectorAll('.metric-card .ml').forEach(ml => {
+    if (ml.textContent.trim() === 'Avg Client Invoice') {
+      const mv = ml.nextElementSibling;
+      const ms = mv ? mv.nextElementSibling : null;
+      if (mv) mv.textContent = '$' + avgInvoice.toLocaleString();
+      if (ms) ms.textContent = `${invoiceCount} transactions · ${MONTHS[0] || ''}–${MONTHS[MONTHS.length-1] || ''}`;
+    }
+    if (ml.textContent.trim() === 'Avg Client LTV') {
+      const mv = ml.nextElementSibling;
+      const ms = mv ? mv.nextElementSibling : null;
+      const avgLTV = uniqueClients > 0 ? Math.round(ltvTotal / uniqueClients) : 0;
+      const sortedTotals = clientRevEntries.map(r => r.total).sort((a, b) => a - b);
+      const medianLTV = sortedTotals.length > 0 ? sortedTotals[Math.floor(sortedTotals.length / 2)] : 0;
+      if (mv) mv.textContent = '$' + avgLTV.toLocaleString();
+      if (ms) ms.textContent = `${uniqueClients} unique clients · median $${medianLTV.toLocaleString()}`;
+    }
+    if (ml.textContent.trim() === 'Top Client (LTV)') {
+      const top = clientRevEntries[0];
+      const mv = ml.nextElementSibling;
+      const ms = mv ? mv.nextElementSibling : null;
+      if (top) {
+        if (mv) mv.textContent = top.name.length > 22 ? top.name.slice(0, 21) + '…' : top.name;
+        if (ms) ms.textContent = `$${top.total.toLocaleString()} lifetime`;
+      }
+    }
+  });
+  // Period badge already updated above; also update last-updated
+  const luEl = document.querySelector('.last-updated');
+  if (luEl && n > 0) luEl.textContent = `Data as of ${MONTHS[n-1]}`;
+  // Transaction count below Revenue Detail
+  const msEls = document.querySelectorAll('.ms');
+  msEls.forEach(el => {
+    if (/transactions · /i.test(el.textContent)) {
+      el.textContent = `${REV_TXNS.length.toLocaleString()} transactions · ${MONTHS[0] || ''}–${MONTHS[MONTHS.length-1] || ''}`;
+    }
+  });
+}
+
+window.addEventListener('load', loadData);
+
+// ── Revenue by Type (stacked bar)
+defChart('revenue', 'revTypeChart', () => ({
+  type: 'bar',
+  data: {
+    labels: MONTHS,
+    datasets: [
+      { label: 'Client Revenue', data: clientRev, backgroundColor: 'rgba(19,144,235,0.75)', borderRadius: 3, stack: 'rev' },
+      { label: 'Candidate Revenue', data: candidateRev, backgroundColor: 'rgba(34,197,94,0.65)', borderRadius: 3, stack: 'rev' }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { boxWidth: 10, boxHeight: 10 } },
+      datalabels: {
+        display: ctx => ctx.datasetIndex === 1,
+        formatter: (v, ctx) => fmtK(ctx.chart.data.datasets.reduce((s, ds) => s + (ds.data[ctx.dataIndex] || 0), 0)),
+        anchor: 'end', align: 'start', offset: 4,
+        color: 'rgba(255,255,255,0.9)', font: { size: 9, weight: '700' }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, stacked: true },
+      y: { stacked: true, ticks: { callback: v => fmtK(v) } }
+    }
+  }
+}));
+
+// ── Revenue Mix Donut
+defChart('revenue', 'revMixDonut', () => ({
+  type: 'doughnut',
+  data: {
+    labels: ['Client Revenue','Candidate Revenue','Referral & Placement'],
+    datasets: [{ data: [691119,291685,10489], backgroundColor: ['#1390eb','#22c55e','#c084fc'], borderWidth: 0, hoverOffset: 4 }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '72%',
+    plugins: { legend: { display: false }, datalabels: { display: false } }
+  }
+}));
+
+// ── Revenue vs Operating Income (Financials tab)
+defChart('financials', 'revVsOpChart', () => ({
+  type: 'bar',
+  data: {
+    labels: MONTHS,
+    datasets: [
+      { type: 'bar', label: 'Revenue', data: totalRev, backgroundColor: 'rgba(19,144,235,0.3)', borderRadius: 3, yAxisID: 'y' },
+      { type: 'line', label: 'Operating Income', data: operatingInc, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', tension: 0.35, pointRadius: 3, borderWidth: 2, fill: true, yAxisID: 'y' }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { boxWidth: 10, boxHeight: 10 } },
+      datalabels: {
+        display: ctx => ctx.datasetIndex === 0,
+        formatter: v => fmtK(v),
+        anchor: 'end', align: 'start', offset: 4,
+        color: 'rgba(255,255,255,0.8)', font: { size: 9, weight: '700' }
+      }
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: { ticks: { callback: v => fmtK(v) } }
+    }
+  }
+}));
+
+// ── Margin Chart (Financials tab)
+defChart('financials', 'marginChart', () => ({
+  type: 'line',
+  data: {
+    labels: MONTHS,
+    datasets: [
+      { label: 'Gross Margin', data: grossMargin, borderColor: '#1390eb', backgroundColor: 'rgba(19,144,235,0.1)', tension: 0.35, pointRadius: 3, borderWidth: 2 },
+      { label: 'Op. Margin', data: opMargin, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.08)', tension: 0.35, pointRadius: 3, borderWidth: 2 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { boxWidth: 10, boxHeight: 10 } },
+      datalabels: {
+        display: true,
+        formatter: v => v.toFixed(0) + '%',
+        align: ctx => ctx.datasetIndex === 0 ? 'top' : 'bottom',
+        anchor: 'center',
+        offset: 2,
+        color: ctx => ctx.datasetIndex === 0 ? '#1390eb' : '#22c55e',
+        font: { size: 9, weight: '700' }
+      }
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: { ticks: { callback: v => v + '%' }, min: 0, max: 100 }
+    }
+  }
+}));
+
+// ── Monthly Expenses Stacked
+defChart('expenses', 'expMonthlyChart', () => ({
+  type: 'bar',
+  data: {
+    labels: MONTHS,
+    datasets: [
+      { label: 'COGS', data: cogs, backgroundColor: 'rgba(239,68,68,0.75)', borderRadius: 3, stack: 'exp' },
+      { label: 'OpEx', data: opex, backgroundColor: 'rgba(245,158,11,0.6)', borderRadius: 3, stack: 'exp' }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { boxWidth: 10, boxHeight: 10 } },
+      datalabels: {
+        display: ctx => ctx.datasetIndex === 1,
+        formatter: (v, ctx) => fmtK(ctx.chart.data.datasets.reduce((s, ds) => s + (ds.data[ctx.dataIndex] || 0), 0)),
+        anchor: 'end', align: 'start', offset: 4,
+        color: 'rgba(255,255,255,0.9)', font: { size: 9, weight: '700' }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, stacked: true },
+      y: { stacked: true, ticks: { callback: v => fmtK(v) } }
+    }
+  }
+}));
+
+// ── COGS Breakdown
+defChart('expenses', 'cogsBreakChart', () => ({
+  type: 'bar',
+  data: {
+    labels: MONTHS,
+    datasets: [
+      { label: 'Talent Acquisition', data: cogsTalent, backgroundColor: 'rgba(239,68,68,0.75)', borderRadius: 2, stack: 'c' },
+      { label: 'Customer Success Mgr', data: cogsCSM, backgroundColor: 'rgba(245,158,11,0.7)', borderRadius: 2, stack: 'c' },
+      { label: 'Interviewers & Talent', data: cogsInt, backgroundColor: 'rgba(192,132,252,0.7)', borderRadius: 2, stack: 'c' },
+      { label: 'Freelancers', data: cogsFreel, backgroundColor: 'rgba(253,224,71,0.6)', borderRadius: 2, stack: 'c' },
+      { label: 'Referral Fees', data: cogsRef, backgroundColor: 'rgba(34,197,94,0.5)', borderRadius: 2, stack: 'c' }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { boxWidth: 8, boxHeight: 8, font: { size: 10 } } },
+      datalabels: {
+        display: ctx => ctx.datasetIndex === 4,
+        formatter: (v, ctx) => { const s = ctx.chart.data.datasets.reduce((a, ds) => a + (ds.data[ctx.dataIndex] || 0), 0); return s > 0 ? fmtK(s) : ''; },
+        anchor: 'end', align: 'start', offset: 3,
+        color: 'rgba(255,255,255,0.85)', font: { size: 8, weight: '700' }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, stacked: true, ticks: { font: { size: 10 } } },
+      y: { stacked: true, ticks: { callback: v => fmtK(v) } }
+    }
+  }
+}));
+
+// ── OpEx Breakdown
+defChart('expenses', 'opexBreakChart', () => ({
+  type: 'bar',
+  data: {
+    labels: MONTHS,
+    datasets: [
+      { label: 'Software', data: opexSoftware, backgroundColor: 'rgba(19,144,235,0.7)', borderRadius: 2, stack: 'o' },
+      { label: 'Recruit. Software', data: opexRecruit, backgroundColor: 'rgba(192,132,252,0.7)', borderRadius: 2, stack: 'o' },
+      { label: 'Stripe Fees', data: opexStripe, backgroundColor: 'rgba(245,158,11,0.65)', borderRadius: 2, stack: 'o' },
+      { label: 'Ads', data: opexAds, backgroundColor: 'rgba(34,197,94,0.55)', borderRadius: 2, stack: 'o' },
+      { label: 'Travel', data: opexTravel, backgroundColor: 'rgba(239,68,68,0.55)', borderRadius: 2, stack: 'o' },
+      { label: 'Other', data: opexOther, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 2, stack: 'o' }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { boxWidth: 8, boxHeight: 8, font: { size: 10 } } },
+      datalabels: {
+        display: ctx => ctx.datasetIndex === 5,
+        formatter: (v, ctx) => { const s = ctx.chart.data.datasets.reduce((a, ds) => a + (ds.data[ctx.dataIndex] || 0), 0); return s > 0 ? fmtK(s) : ''; },
+        anchor: 'end', align: 'start', offset: 3,
+        color: 'rgba(255,255,255,0.85)', font: { size: 8, weight: '700' }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, stacked: true, ticks: { font: { size: 10 } } },
+      y: { stacked: true, ticks: { callback: v => fmtK(v) } }
+    }
+  }
+}));
+
+// ── AR Aging Donut
+defChart('receivables', 'arAgingDonut', () => ({
+  type: 'doughnut',
+  data: {
+    labels: ['0–30 days','31–60 days','61–90+ days'],
+    datasets: [{ data: [5120,27720,1200], backgroundColor: ['#22c55e','#f59e0b','#ef4444'], borderWidth: 0, hoverOffset: 4 }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '72%',
+    plugins: {
+      legend: { display: false },
+      datalabels: {
+        display: true,
+        formatter: (v, ctx) => {
+          const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+          return Math.round(v / total * 100) + '%';
+        },
+        color: '#fff', font: { size: 10, weight: '700' }
+      }
+    }
+  }
+}));
+
+// ── Transaction tables (dynamic rendering)
+let REV_TXNS = [];
+let EXP_TXNS = [];
+const TYPE_COLORS = {
+  'Client Revenue': 'var(--blue)',
+  'Candidate Revenue': 'var(--green)',
+  'Referral Income': 'var(--purple)',
+  'Placement Revenue': 'var(--amber)'
+};
+
+function renderRevTxns() {
+  const typeFilter = document.getElementById('revTypeFilter').value;
+  const search = document.getElementById('revSearch').value.toLowerCase().trim();
+  let rows = REV_TXNS;
+  if (typeFilter) rows = rows.filter(r => r[2] === typeFilter);
+  if (search) rows = rows.filter(r => r[1].toLowerCase().includes(search));
+  document.getElementById('revCount').textContent = rows.length.toLocaleString() + ' transactions';
+  const tbody = document.getElementById('revTxnBody');
+  tbody.innerHTML = rows.map(r => {
+    const col = TYPE_COLORS[r[2]] || 'var(--text)';
+    return `<tr>
+      <td style="color:var(--muted);font-size:12px">${r[0]}</td>
+      <td>${r[1]}</td>
+      <td><span class="pill" style="background:rgba(255,255,255,0.06);color:var(--muted)">${r[2]}</span></td>
+      <td class="num" style="color:${col};font-family:'Anton',sans-serif;font-size:14px">${fmtAmt(r[3])}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderExpTxns() {
+  const catFilter = document.getElementById('expCatFilter').value;
+  const search = document.getElementById('expSearch').value.toLowerCase().trim();
+  let rows = EXP_TXNS;
+  if (catFilter) rows = rows.filter(r => r[2] === catFilter);
+  if (search) rows = rows.filter(r => r[1].toLowerCase().includes(search));
+  document.getElementById('expCount').textContent = rows.length.toLocaleString() + ' transactions';
+  const tbody = document.getElementById('expTxnBody');
+  tbody.innerHTML = rows.map(r => `<tr>
+    <td style="color:var(--muted);font-size:12px">${r[0]}</td>
+    <td>${r[1]}</td>
+    <td><span class="pill" style="background:rgba(255,255,255,0.06);color:var(--muted)">${r[2]}</span></td>
+    <td class="num" style="color:var(--red);font-family:'Anton',sans-serif;font-size:14px">${fmtAmt(r[3])}</td>
+  </tr>`).join('');
+}
+
+function togglePL(group) {
+  const rows = document.querySelectorAll('.plsub-' + group);
+  const btn = document.querySelector('.plbtn-' + group);
+  const opening = !btn.classList.contains('open');
+  btn.classList.toggle('open');
+  rows.forEach(r => r.style.display = opening ? 'table-row' : 'none');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "hiry-agency-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Live financial dashboard for Hiry Agency, powered by Google Sheets data",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "googleapis": "^144.0.0"
+  }
+}
