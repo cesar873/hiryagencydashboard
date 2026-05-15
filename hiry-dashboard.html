@@ -468,6 +468,7 @@ tr:last-child td { border-bottom: none; }
   <button class="tab-btn active" onclick="showTab(this,'financials')">Financials</button>
   <button class="tab-btn" onclick="showTab(this,'revenue')">Revenue</button>
   <button class="tab-btn" onclick="showTab(this,'expenses')">Expenses</button>
+  <button class="tab-btn" onclick="showTab(this,'budget')">Budget vs Actual</button>
   <button class="tab-btn" onclick="showTab(this,'receivables')">Receivables</button>
 </nav>
 
@@ -1032,6 +1033,58 @@ tr:last-child td { border-bottom: none; }
 </div>
 
 <!-- ══════════════════════════════ RECEIVABLES ══ -->
+<!-- ══════════════════════════════ BUDGET vs ACTUAL ══ -->
+<div id="budget" class="page">
+  <div class="panel" style="margin-bottom:14px">
+    <h2 id="budgetTitle">Budget vs Actual · —</h2>
+    <p class="sub" id="budgetSub">Single-month comparison · ordered Revenue → COGS → Expenses · use the Period filter above to switch months</p>
+    <div id="budgetMeta" style="margin-top:6px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.6px"></div>
+  </div>
+
+  <div class="kpi-grid gap">
+    <div class="kpi" id="budgetKpiRev"   style="border-top:3px solid var(--green)">
+      <div class="label">Revenue</div>
+      <div class="value" style="color:var(--blue)" id="bRevActual">—</div>
+      <div class="delta" id="bRevDelta">—</div>
+      <div style="color:var(--muted);font-size:11px;margin-top:4px" id="bRevBudget">vs budget —</div>
+    </div>
+    <div class="kpi" id="budgetKpiCogs"  style="border-top:3px solid var(--green)">
+      <div class="label">Cost of Sales</div>
+      <div class="value" id="bCogsActual">—</div>
+      <div class="delta" id="bCogsDelta">—</div>
+      <div style="color:var(--muted);font-size:11px;margin-top:4px" id="bCogsBudget">vs budget —</div>
+    </div>
+    <div class="kpi" id="budgetKpiOpex"  style="border-top:3px solid var(--green)">
+      <div class="label">Operating Expenses</div>
+      <div class="value" id="bOpexActual">—</div>
+      <div class="delta" id="bOpexDelta">—</div>
+      <div style="color:var(--muted);font-size:11px;margin-top:4px" id="bOpexBudget">vs budget —</div>
+    </div>
+    <div class="kpi" id="budgetKpiNet"   style="border-top:3px solid var(--green)">
+      <div class="label">Net Income</div>
+      <div class="value" style="color:var(--blue)" id="bNetActual">—</div>
+      <div class="delta" id="bNetDelta">—</div>
+      <div style="color:var(--muted);font-size:11px;margin-top:4px" id="bNetBudget">vs budget —</div>
+    </div>
+  </div>
+
+  <div class="panel gap" style="padding:0;overflow:hidden">
+    <table id="budgetTbl" style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="border-bottom:1px solid var(--card-border)">
+          <th style="text-align:left;padding:14px 20px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Category</th>
+          <th class="num" style="padding:14px 20px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Budget</th>
+          <th class="num" style="padding:14px 20px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Actual</th>
+          <th class="num" style="padding:14px 20px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Variance $</th>
+          <th class="num" style="padding:14px 20px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Variance %</th>
+          <th style="padding:14px 20px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;width:240px">Progress</th>
+        </tr>
+      </thead>
+      <tbody id="budgetTbody"><tr><td colspan="6" style="padding:60px;text-align:center;color:var(--muted)">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
 <div id="receivables" class="page">
 
   <div class="panel" style="text-align:center;padding:60px 40px">
@@ -1064,6 +1117,7 @@ let operatingInc = [], grossMargin = [], opMargin = [];
 let cogs = [], opex = [];
 let cogsTalent = [], cogsCSM = [], cogsInt = [], cogsFreel = [], cogsRef = [];
 let opexSoftware = [], opexRecruit = [], opexStripe = [], opexAds = [], opexTravel = [], opexOther = [];
+let BUDGET = { months: [], byMonth: {}, meta: {} };
 
 const fmtK = v => '$'+(v/1000).toFixed(0)+'k';
 const fmtAmt = v => '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -1073,7 +1127,7 @@ Chart.register(ChartDataLabels);
 // ── Lazy chart system
 const chartRegistry = {};
 const chartFactories = {};
-const tabCharts = { revenue: [], expenses: [], financials: [], receivables: [] };
+const tabCharts = { revenue: [], expenses: [], financials: [], receivables: [], budget: [] };
 
 function defChart(tabId, chartId, configFn) {
   tabCharts[tabId].push(chartId);
@@ -1496,7 +1550,130 @@ function applyFilters() {
   renderMomRev();
   renderMomExp();
   renderExpCat();
+  renderBudget();
   applyRangeToCharts();
+}
+
+// ── Budget vs Actual renderer ──────────────────────────
+function renderBudget() {
+  const m = filterState.period;
+  const monthLabel = MONTHS[m] || '—';
+  const titleEl = document.getElementById('budgetTitle');
+  const subEl = document.getElementById('budgetSub');
+  const metaEl = document.getElementById('budgetMeta');
+  const tbody = document.getElementById('budgetTbody');
+  if (titleEl) titleEl.textContent = 'Budget vs Actual · ' + monthLabel;
+  if (subEl) subEl.textContent = monthLabel + ' · single-month comparison · ordered Revenue → COGS → Expenses · use the Period filter above to switch months';
+  if (metaEl) {
+    const bm = (BUDGET && BUDGET.meta) || {};
+    metaEl.textContent = 'Budget parsed: ' + (bm.monthsCount || 0) + ' months · ' +
+      (bm.revenueLineItems || 0) + ' revenue · ' + (bm.cogsLineItems || 0) + ' cogs · ' +
+      (bm.opexLineItems || 0) + ' opex line items';
+  }
+
+  const monthData = BUDGET && BUDGET.byMonth ? BUDGET.byMonth[monthLabel] : null;
+
+  // KPIs — read totals from the Budget tab if present, else compute from items
+  function totalsFor(grpRegex) {
+    if (!monthData) return { budget: 0, actual: 0 };
+    let b = 0, a = 0;
+    for (const it of monthData.items) {
+      if (grpRegex.test(it.grp)) { b += it.budget; a += it.actual; }
+    }
+    return { budget: b, actual: a };
+  }
+
+  let revT = totalsFor(/revenue/i);
+  let cogsT = totalsFor(/cogs/i);
+  let opexT = totalsFor(/expense|opex/i);
+  // Prefer canonical totals from Budget tab if they exist
+  const tot = (monthData && monthData.totals) || {};
+  if (tot['total revenue']) revT = tot['total revenue'];
+  if (tot['total cost of sales']) cogsT = tot['total cost of sales'];
+  if (tot['total operating expenses']) opexT = tot['total operating expenses'];
+
+  // Net Income = Revenue − COGS − OpEx (use canonical if available)
+  const netT = tot['net income'] || tot['operating income'] || {
+    budget: revT.budget - cogsT.budget - opexT.budget,
+    actual: revT.actual - cogsT.actual - opexT.actual
+  };
+
+  const fmtUSD0 = v => (v < 0 ? '-' : '') + '$' + Math.abs(Math.round(v)).toLocaleString();
+  function setKpi(actualId, deltaId, budgetId, kpiCardId, actual, budget, isPositiveGood) {
+    setText(actualId, fmtUSD0(actual));
+    setText(budgetId, 'vs budget ' + fmtUSD0(budget));
+    const diff = actual - budget;
+    const pct = budget !== 0 ? (diff / Math.abs(budget) * 100) : 0;
+    const arrow = diff > 0 ? '▲ +' : diff < 0 ? '▼ ' : '↔ ';
+    const deltaEl = document.getElementById(deltaId);
+    if (deltaEl) {
+      // For revenue/net income, positive = good (green). For costs, positive = bad (red).
+      const isGood = isPositiveGood ? (diff >= 0) : (diff <= 0);
+      deltaEl.textContent = arrow + pct.toFixed(1) + '%';
+      deltaEl.className = 'delta ' + (isGood ? 'up' : 'down');
+    }
+    const card = document.getElementById(kpiCardId);
+    if (card) {
+      const isGood = isPositiveGood ? (diff >= 0) : (diff <= 0);
+      card.style.borderTopColor = isGood ? 'var(--green)' : 'var(--red)';
+    }
+  }
+  setKpi('bRevActual', 'bRevDelta', 'bRevBudget', 'budgetKpiRev', revT.actual, revT.budget, true);
+  setKpi('bCogsActual','bCogsDelta','bCogsBudget','budgetKpiCogs', cogsT.actual, cogsT.budget, false);
+  setKpi('bOpexActual','bOpexDelta','bOpexBudget','budgetKpiOpex', opexT.actual, opexT.budget, false);
+  setKpi('bNetActual', 'bNetDelta', 'bNetBudget', 'budgetKpiNet',  netT.actual, netT.budget, true);
+
+  // Build table rows grouped by section
+  if (!monthData || monthData.items.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:60px;text-align:center;color:var(--muted)">No budget data for ' + escapeHtml(monthLabel) + '. Add a row to the <b style="color:var(--text)">Budget</b> tab in your sheet for this month.</td></tr>';
+    return;
+  }
+
+  const revItems = monthData.items.filter(it => /revenue/i.test(it.grp)).filter(it => Math.abs(it.budget) + Math.abs(it.actual) > 0.5);
+  const cogsItems = monthData.items.filter(it => /cogs/i.test(it.grp)).filter(it => Math.abs(it.budget) + Math.abs(it.actual) > 0.5);
+  const opexItems = monthData.items.filter(it => /expense|opex/i.test(it.grp) && !/revenue|cogs/i.test(it.grp)).filter(it => Math.abs(it.budget) + Math.abs(it.actual) > 0.5);
+
+  function sectionHeaderRow(label, color) {
+    return '<tr style="background:rgba(255,255,255,0.02)"><td colspan="6" style="padding:12px 20px;font-family:\'Anton\',sans-serif;font-size:13px;letter-spacing:1px;color:' + color + '">' + label + '</td></tr>';
+  }
+  function dataRow(it, isCost) {
+    const diff = it.actual - it.budget;
+    const pct = it.budget !== 0 ? (diff / Math.abs(it.budget) * 100) : 0;
+    // Progress bar: actual as % of budget, capped at 200%
+    const ratio = it.budget > 0 ? Math.min(2, it.actual / it.budget) : (it.actual > 0 ? 2 : 0);
+    const widthPct = Math.min(100, ratio * 50); // 100% width = 200% of budget
+    // Color: revenue under budget = bad (red), revenue over = good (green)
+    // Costs under budget = good (green), over = bad (red)
+    const isOverBudget = it.actual > it.budget;
+    const isGood = isCost ? !isOverBudget : isOverBudget;
+    const barColor = isGood ? 'var(--green)' : (isOverBudget && Math.abs(pct) > 5 ? 'var(--red)' : 'var(--amber)');
+    const diffSign = diff > 0 ? '+' : '';
+    const diffStr = diff === 0 ? '+—' : diffSign + fmtUSD0(diff);
+    const pctSign = pct > 0 ? '+' : '';
+    return '<tr style="border-bottom:1px solid rgba(255,255,255,0.04)">' +
+      '<td style="padding:11px 20px;font-size:13px">' + escapeHtml(it.cat) + '</td>' +
+      '<td class="num" style="padding:11px 20px;font-size:13px;color:rgba(255,255,255,0.85)">' + fmtUSD0(it.budget) + '</td>' +
+      '<td class="num" style="padding:11px 20px;font-size:13px;font-weight:600">' + fmtUSD0(it.actual) + '</td>' +
+      '<td class="num" style="padding:11px 20px;font-size:12px;color:' + (diff === 0 ? 'var(--muted)' : (isGood ? 'var(--green)' : 'var(--red)')) + '">' + diffStr + '</td>' +
+      '<td class="num" style="padding:11px 20px;font-size:12px;color:' + (pct === 0 ? 'var(--muted)' : (isGood ? 'var(--green)' : 'var(--red)')) + '">' + pctSign + pct.toFixed(1) + '%</td>' +
+      '<td style="padding:11px 20px;width:240px"><div style="height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden"><div style="height:100%;background:' + barColor + ';width:' + widthPct + '%;transition:width 0.3s"></div></div></td>' +
+      '</tr>';
+  }
+
+  let html = '';
+  if (revItems.length) {
+    html += sectionHeaderRow('REVENUE', 'var(--blue)');
+    for (const it of revItems) html += dataRow(it, false);
+  }
+  if (cogsItems.length) {
+    html += sectionHeaderRow('COST OF SALES', 'var(--red)');
+    for (const it of cogsItems) html += dataRow(it, true);
+  }
+  if (opexItems.length) {
+    html += sectionHeaderRow('OPERATING EXPENSES', 'var(--amber)');
+    for (const it of opexItems) html += dataRow(it, true);
+  }
+  tbody.innerHTML = html || '<tr><td colspan="6" style="padding:40px;text-align:center;color:var(--muted)">No line items for this month</td></tr>';
 }
 
 
@@ -1583,6 +1760,7 @@ function applyData(D) {
   MOM_DATA = D.MOM_DATA || { months: [], revenue: [], expenses: [] };
   REV_TXNS = D.REV_TXNS || [];
   EXP_TXNS = D.EXP_TXNS || [];
+  BUDGET = D.budget || { months: [], byMonth: {}, meta: {} };
   rebuildFilterDropdowns();
   rebuildStaticKPIs();
 }

@@ -63,6 +63,145 @@ function lastDayOfMonth(monthShort) {
   return new Date(year, monIdx + 1, 0);
 }
 
+// Parse any cell that represents a month → { monShort: "Apr", year4: 2026 } or null
+function parseMonthCellGeneric(v) {
+  if (!v) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  let m = s.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s\-\/.,]+(\d{2,4})$/i);
+  if (m) {
+    const monShort = m[1][0].toUpperCase() + m[1].slice(1, 3).toLowerCase();
+    const yr = parseInt(m[2], 10);
+    return { monShort, year4: yr < 100 ? 2000 + yr : yr };
+  }
+  m = s.match(/^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})$/i);
+  if (m) {
+    const fullName = m[1][0].toUpperCase() + m[1].slice(1).toLowerCase();
+    const idx = MONTH_FULL.indexOf(fullName);
+    if (idx >= 0) return { monShort: MONTH_SHORT[idx], year4: parseInt(m[2], 10) };
+  }
+  m = s.match(/^(\d{4})[\-\/](\d{1,2})$/);
+  if (m) {
+    const monIdx = parseInt(m[2], 10) - 1;
+    if (monIdx >= 0 && monIdx < 12) return { monShort: MONTH_SHORT[monIdx], year4: parseInt(m[1], 10) };
+  }
+  m = s.match(/^(\d{1,2})\/\d{1,2}\/(\d{4})$/);
+  if (m) {
+    const monIdx = parseInt(m[1], 10) - 1;
+    if (monIdx >= 0 && monIdx < 12) return { monShort: MONTH_SHORT[monIdx], year4: parseInt(m[2], 10) };
+  }
+  return null;
+}
+function monthShort(parsed) {
+  return `${parsed.monShort} ${String(parsed.year4).slice(2)}`;
+}
+
+// ── Budget tab reader (long-format) ─────────────────────────────
+async function fetchBudgetData(sheets, sheetId, tabs) {
+  const budgetTab = tabs.find(t => /^budget$/i.test(t));
+  if (!budgetTab) return { tab: null, months: [], byMonth: {}, meta: { error: 'No Budget tab found' } };
+
+  let res;
+  try {
+    res = await sheets.spreadsheets.values.get({
+      spreadsheetId: sheetId,
+      range: `'${budgetTab}'!A1:G10000`,
+      valueRenderOption: 'FORMATTED_VALUE'
+    });
+  } catch (e) {
+    return { tab: budgetTab, months: [], byMonth: {}, meta: { error: 'Budget read failed: ' + e.message } };
+  }
+  const rows = res.data.values || [];
+
+  // Find header row
+  let headerIdx = -1;
+  let cols = {};
+  for (let i = 0; i < Math.min(rows.length, 30); i++) {
+    const row = (rows[i] || []).map(c => String(c || '').trim());
+    if (row.includes('Month') && row.includes('Category') && row.includes('Budget')) {
+      headerIdx = i;
+      cols = {
+        month:    row.indexOf('Month'),
+        category: row.indexOf('Category'),
+        group:    row.indexOf('Group'),
+        budget:   row.indexOf('Budget'),
+        actual:   row.indexOf('Actual')
+      };
+      break;
+    }
+  }
+  if (headerIdx < 0) {
+    return { tab: budgetTab, months: [], byMonth: {}, meta: { error: 'Header row (Month/Category/Group/Budget) not found' } };
+  }
+
+  // Aggregate group totals separately — rows like "Total Revenue", "Total Cost of Sales", "Total Operating Expenses", "Net Income"
+  const TOTAL_LABELS = new Set([
+    'total revenue', 'total cost of sales', 'total operating expenses',
+    'total expenses', 'total business expenses', 'operating income', 'net income',
+    'gross profit', 'gross margin', 'operating margin', 'net profit margin'
+  ]);
+
+  const byMonth = {}; // monthShort → { items:[{cat, grp, budget, actual}], totals: {...} }
+  const monthSet = new Set();
+
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.length === 0) continue;
+    const monthRaw = String(row[cols.month] || '').trim();
+    const cat = String(row[cols.category] || '').trim();
+    const grp = String(row[cols.group] || '').trim();
+    if (!monthRaw || !cat) continue;
+    const parsed = parseMonthCellGeneric(monthRaw);
+    if (!parsed) continue;
+    const mShort = monthShort(parsed);
+    monthSet.add(mShort);
+
+    const budget = num(row[cols.budget]);
+    const actual = cols.actual >= 0 ? num(row[cols.actual]) : 0;
+
+    if (!byMonth[mShort]) {
+      byMonth[mShort] = { items: [], totals: {} };
+    }
+    const entry = { cat, grp, budget, actual };
+    const catLower = cat.toLowerCase();
+    if (TOTAL_LABELS.has(catLower)) {
+      byMonth[mShort].totals[catLower] = { budget, actual };
+    } else {
+      byMonth[mShort].items.push(entry);
+    }
+  }
+
+  // Sort months chronologically using same ordering rule as elsewhere
+  const monthsSorted = Array.from(monthSet).sort((a, b) => {
+    const pa = parseMonthCellGeneric(a);
+    const pb = parseMonthCellGeneric(b);
+    return (pa.year4 * 12 + MONTH_SHORT.indexOf(pa.monShort)) - (pb.year4 * 12 + MONTH_SHORT.indexOf(pb.monShort));
+  });
+
+  // Meta counts (use first month to count typical items)
+  let revCount = 0, cogsCount = 0, opexCount = 0;
+  if (monthsSorted.length > 0) {
+    const sample = byMonth[monthsSorted[0]].items;
+    for (const it of sample) {
+      if (/revenue/i.test(it.grp)) revCount++;
+      else if (/cogs/i.test(it.grp)) cogsCount++;
+      else if (/expense|opex/i.test(it.grp)) opexCount++;
+    }
+  }
+
+  return {
+    tab: budgetTab,
+    months: monthsSorted,
+    byMonth,
+    meta: {
+      monthsCount: monthsSorted.length,
+      revenueLineItems: revCount,
+      cogsLineItems: cogsCount,
+      opexLineItems: opexCount
+    }
+  };
+}
+
 // ── Sheet read ──────────────────────────────────────────────────
 async function authClient() {
   const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
@@ -401,6 +540,9 @@ async function fetchSheetData() {
     txnDebug.error = 'No transactions tab found in the spreadsheet';
   }
 
+  // ── Budget tab read ──────────────────────────────────────────
+  const budget = await fetchBudgetData(sheets, SHEET_ID, tabs);
+
   return {
     months,
     PERIOD_LABELS,
@@ -419,6 +561,7 @@ async function fetchSheetData() {
     activeClients90d,
     REV_TXNS,
     EXP_TXNS,
+    budget,
     _meta: {
       fetchedAt: new Date().toISOString(),
       incomeTab,
@@ -427,7 +570,8 @@ async function fetchSheetData() {
       window: `${months[0]} → ${months[months.length - 1]}`,
       txnDebug,
       revenueEntities: MOM_DATA.revenue.length,
-      expenseEntities: MOM_DATA.expenses.length
+      expenseEntities: MOM_DATA.expenses.length,
+      budget: budget.meta
     }
   };
 }
