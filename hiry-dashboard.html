@@ -1205,19 +1205,19 @@ function updateKPIs() {
   const p = filterState.period;
   const pl = periodLabel(p);
   const ps = periodShort(p);
-  const fcSuffix = isForecast[p] ? ' · 🔮 FORECAST' : '';
+  const fcSuffix = isForecast[p] ? ' · Forecast' : '';
 
-  // Forecast banner on the page (one shared element) — toggle visibility
-  let banner = document.getElementById('forecastBanner');
-  if (!banner) {
-    banner = document.createElement('div');
-    banner.id = 'forecastBanner';
-    banner.style.cssText = 'background:rgba(192,132,252,0.12);border:1px solid rgba(192,132,252,0.35);color:#e9d5ff;padding:10px 18px;border-radius:8px;margin-bottom:12px;font-size:13px;display:flex;align-items:center;gap:10px';
-    banner.innerHTML = '<span style="font-family:\'Anton\',sans-serif;letter-spacing:1px;color:#c084fc">🔮 FORECAST</span><span>You are viewing a <b>projected month</b>. These figures are estimates, not actuals.</span>';
-    const tabsContainer = document.querySelector('nav');
-    if (tabsContainer && tabsContainer.parentNode) tabsContainer.parentNode.insertBefore(banner, tabsContainer.nextSibling);
+  // Forecast indicator — a single discreet pill in the header area
+  let pill = document.getElementById('forecastPill');
+  if (!pill) {
+    pill = document.createElement('span');
+    pill.id = 'forecastPill';
+    pill.style.cssText = 'display:none;font-size:10px;padding:3px 10px;border-radius:4px;background:rgba(192,132,252,0.18);color:#c084fc;text-transform:uppercase;letter-spacing:0.7px;font-weight:700;margin-left:10px;vertical-align:middle';
+    pill.textContent = 'Forecast';
+    const periodBadge = document.querySelector('.period-badge');
+    if (periodBadge && periodBadge.parentNode) periodBadge.parentNode.appendChild(pill);
   }
-  banner.style.display = isForecast[p] ? 'flex' : 'none';
+  pill.style.display = isForecast[p] ? 'inline-block' : 'none';
 
   // Revenue tab
   const rev = totalRev[p] || 0;
@@ -1241,20 +1241,20 @@ function updateKPIs() {
   const opexV = opex[p] || 0;
   const cogsPct = rev > 0 ? (cogsV/rev*100).toFixed(1) : '0';
   const opexPct = rev > 0 ? (opexV/rev*100).toFixed(1) : '0';
-  setText('kpiCOGSLabel', 'COGS (' + ps + ')' + (isForecast[p] ? ' 🔮' : ''));
+  setText('kpiCOGSLabel', 'COGS (' + ps + ')' + (isForecast[p] ? ' · Forecast' : ''));
   setText('kpiCOGS', fmtUSD(cogsV));
   setText('kpiCOGSDelta', cogsPct + '% of revenue');
-  setText('kpiOpExLabel', 'OpEx (' + ps + ')' + (isForecast[p] ? ' 🔮' : ''));
+  setText('kpiOpExLabel', 'OpEx (' + ps + ')' + (isForecast[p] ? ' · Forecast' : ''));
   setText('kpiOpEx', fmtUSD(opexV));
   setText('kpiOpExDelta', opexPct + '% of revenue');
   // Total Expenses (period-driven)
   const totExp = cogsV + opexV;
   const totExpPct = rev > 0 ? (totExp/rev*100).toFixed(1) : '0';
-  setText('kpiExpTotalLabel', 'Total Expenses (' + ps + ')' + (isForecast[p] ? ' 🔮' : ''));
+  setText('kpiExpTotalLabel', 'Total Expenses (' + ps + ')' + (isForecast[p] ? ' · Forecast' : ''));
   setText('kpiExpTotal', fmtUSD(totExp));
   setText('kpiExpTotalSub', totExpPct + '% of revenue · COGS + OpEx');
   // Top Vendor (period-driven)
-  setText('kpiTopVendorLabel', 'Top Vendor (' + ps + ')' + (isForecast[p] ? ' 🔮' : ''));
+  setText('kpiTopVendorLabel', 'Top Vendor (' + ps + ')' + (isForecast[p] ? ' · Forecast' : ''));
   if (typeof MOM_DATA !== 'undefined' && MOM_DATA && MOM_DATA.expenses) {
     let bestV = 0, bestVendor = '—', bestCat = '';
     for (const r of MOM_DATA.expenses) {
@@ -1269,7 +1269,7 @@ function updateKPIs() {
   const opInc = operatingInc[p] || 0;
   const gm = grossMargin[p] || 0;
   const om = opMargin[p] || 0;
-  setText('kpiOpIncLabel', 'Operating Income (' + ps + ')' + (isForecast[p] ? ' 🔮' : ''));
+  setText('kpiOpIncLabel', 'Operating Income (' + ps + ')' + (isForecast[p] ? ' · Forecast' : ''));
   setText('kpiOpInc', fmtUSD(opInc));
   setText('kpiOpIncSub', om.toFixed(1) + '% margin');
   setText('kpiOpMargin', om.toFixed(1) + '%');
@@ -1728,7 +1728,7 @@ function renderPLTable() {
 
   function thMonth(label, i) {
     const fcStyle = isForecast[i] ? 'font-style:italic;color:#c084fc;' : '';
-    return `<th class="num" style="${fcStyle}">${label}${isForecast[i] ? ' 🔮' : ''}</th>`;
+    return `<th class="num" style="${fcStyle}">${label}</th>`;
   }
   function tdMonth(v, i, opts) {
     opts = opts || {};
