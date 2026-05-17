@@ -547,6 +547,25 @@ async function fetchSheetData() {
     return monthCols.map(mc => num(row[mc.colIdx]));
   }
 
+  // Detect Actuals vs Forecast per month from the "Status" row
+  function detectStatusRow() {
+    // Scan rows near the header row (a few rows above or below) for a row labeled "Status"
+    const scanStart = Math.max(0, headerRowIdx - 2);
+    const scanEnd = Math.min(incomeRows.length, headerRowIdx + 4);
+    for (let i = scanStart; i < scanEnd; i++) {
+      const r = incomeRows[i] || [];
+      const label = String(r[0] || '').toLowerCase().trim();
+      if (label === 'status') return r;
+    }
+    return null;
+  }
+  const statusRow = detectStatusRow();
+  const allIsForecast = monthCols.map(mc => {
+    if (!statusRow) return false;
+    const v = String(statusRow[mc.colIdx] || '').toLowerCase().trim();
+    return v === 'forecast' || v === 'projection' || v === 'projected' || v.startsWith('budget');
+  });
+
   // Pull all canonical rows from Income Summary
   const allTotalRev  = getMonthlyRow('Total Revenue');
 
@@ -562,6 +581,7 @@ async function fetchSheetData() {
 
   const months = monthCols.slice(startCol, endCol).map(m => m.shortLabel);
   const PERIOD_LABELS = monthCols.slice(startCol, endCol).map(m => m.fullLabel);
+  const isForecast = allIsForecast.slice(startCol, endCol);
 
   const totalRev     = window(allTotalRev);
   const clientRev    = window(getMonthlyRow('Client Revenue'));
@@ -666,6 +686,7 @@ async function fetchSheetData() {
   return {
     months,
     PERIOD_LABELS,
+    isForecast,
     totalRev,
     clientRev,
     candidateRev,
@@ -689,6 +710,7 @@ async function fetchSheetData() {
       txnTab: txnTab || null,
       monthsLoaded: months.length,
       window: `${months[0]} → ${months[months.length - 1]}`,
+      forecastMonths: months.filter((_, i) => isForecast[i]),
       txnDebug,
       revenueEntities: MOM_DATA.revenue.length,
       expenseEntities: MOM_DATA.expenses.length,

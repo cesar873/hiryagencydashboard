@@ -871,159 +871,9 @@ tr:last-child td { border-bottom: none; }
 
   <div class="panel gap">
     <h2>P&amp;L by Month</h2>
-    <p class="sub">Revenue, COGS, gross profit, OpEx, and operating income — Apr 2025 to Apr 2026</p>
+    <p class="sub" id="plSub">Revenue, COGS, gross profit, OpEx, and operating income — live from the sheet</p>
     <div class="tbl-scroll">
-      <table>
-        <thead><tr>
-          <th>Line</th>
-          <th class="num">Apr 25</th><th class="num">May 25</th><th class="num">Jun 25</th>
-          <th class="num">Jul 25</th><th class="num">Aug 25</th><th class="num">Sep 25</th>
-          <th class="num">Oct 25</th><th class="num">Nov 25</th><th class="num">Dec 25</th>
-          <th class="num">Jan 26</th><th class="num">Feb 26</th><th class="num">Mar 26</th>
-          <th class="num">Apr 26</th>
-          <th class="num">TTM</th>
-        </tr></thead>
-        <tbody>
-          <!-- REVENUE -->
-          <tr>
-            <td><button class="plbtn plbtn-rev" onclick="togglePL('rev')" title="Expand revenue breakdown">▶</button><strong>Revenue</strong></td>
-            <td class="num">$55,653</td><td class="num">$78,534</td><td class="num">$81,594</td><td class="num">$104,884</td><td class="num">$81,741</td><td class="num">$88,825</td><td class="num">$88,558</td><td class="num">$84,847</td><td class="num">$78,869</td><td class="num">$52,436</td><td class="num">$79,799</td><td class="num">$111,576</td>
-            <td class="num">$50,139</td>
-            <td class="num" style="color:var(--blue)"><strong>$982K</strong></td>
-          </tr>
-          <tr class="plsub plsub-rev" style="display:none">
-            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Client Revenue</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">$31,532</td><td class="num" style="color:rgba(255,255,255,0.45)">$49,167</td><td class="num" style="color:rgba(255,255,255,0.45)">$53,783</td><td class="num" style="color:rgba(255,255,255,0.45)">$74,682</td><td class="num" style="color:rgba(255,255,255,0.45)">$65,465</td><td class="num" style="color:rgba(255,255,255,0.45)">$61,407</td><td class="num" style="color:rgba(255,255,255,0.45)">$65,870</td><td class="num" style="color:rgba(255,255,255,0.45)">$56,297</td><td class="num" style="color:rgba(255,255,255,0.45)">$58,238</td><td class="num" style="color:rgba(255,255,255,0.45)">$21,453</td><td class="num" style="color:rgba(255,255,255,0.45)">$57,867</td><td class="num" style="color:rgba(255,255,255,0.45)">$91,613</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">$35,277</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">$691K</td>
-          </tr>
-          <tr class="plsub plsub-rev" style="display:none">
-            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Candidate Revenue</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">$23,422</td><td class="num" style="color:rgba(255,255,255,0.45)">$27,924</td><td class="num" style="color:rgba(255,255,255,0.45)">$27,731</td><td class="num" style="color:rgba(255,255,255,0.45)">$23,377</td><td class="num" style="color:rgba(255,255,255,0.45)">$19,805</td><td class="num" style="color:rgba(255,255,255,0.45)">$25,805</td><td class="num" style="color:rgba(255,255,255,0.45)">$25,649</td><td class="num" style="color:rgba(255,255,255,0.45)">$30,556</td><td class="num" style="color:rgba(255,255,255,0.45)">$21,514</td><td class="num" style="color:rgba(255,255,255,0.45)">$30,982</td><td class="num" style="color:rgba(255,255,255,0.45)">$23,516</td><td class="num" style="color:rgba(255,255,255,0.45)">$19,964</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">$14,862</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">$292K</td>
-          </tr>
-          <tr class="plsub plsub-rev" style="display:none">
-            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Placement & Referral</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">$699</td><td class="num" style="color:rgba(255,255,255,0.45)">$1,443</td><td class="num" style="color:rgba(255,255,255,0.45)">$80</td><td class="num" style="color:rgba(255,255,255,0.45)">$6,825</td><td class="num" style="color:rgba(255,255,255,0.45)">$63</td><td class="num" style="color:rgba(255,255,255,0.45)">$1,882</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">$196</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">—</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">$10K</td>
-          </tr>
-          <tr class="plsub plsub-rev" style="display:none">
-            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Refunds</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,591</td><td class="num" style="color:rgba(255,255,255,0.45)">-$270</td><td class="num" style="color:rgba(255,255,255,0.45)">-$970</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$883</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,780</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">—</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$7K</td>
-          </tr>
-          <!-- COGS -->
-          <tr>
-            <td><button class="plbtn plbtn-cogs" onclick="togglePL('cogs')" title="Expand COGS breakdown">▶</button>COGS</td>
-            <td class="num" style="color:var(--red)">-$10,251</td><td class="num" style="color:var(--red)">-$11,550</td><td class="num" style="color:var(--red)">-$5,106</td><td class="num" style="color:var(--red)">-$8,002</td><td class="num" style="color:var(--red)">-$3,533</td><td class="num" style="color:var(--red)">-$8,179</td><td class="num" style="color:var(--red)">-$9,667</td><td class="num" style="color:var(--red)">-$8,774</td><td class="num" style="color:var(--red)">-$18,268</td><td class="num" style="color:var(--red)">-$10,640</td><td class="num" style="color:var(--red)">-$15,344</td><td class="num" style="color:var(--red)">-$17,069</td>
-            <td class="num" style="color:var(--red)">-$10,713</td>
-            <td class="num" style="color:var(--red)">-$127K</td>
-          </tr>
-          <tr class="plsub plsub-cogs" style="display:none">
-            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Talent Acquisition</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$1,734</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,157</td><td class="num" style="color:rgba(255,255,255,0.45)">-$900</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,301</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,800</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,498</td><td class="num" style="color:rgba(255,255,255,0.45)">-$7,217</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,119</td><td class="num" style="color:rgba(255,255,255,0.45)">-$5,711</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,759</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$7,210</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$40K</td>
-          </tr>
-          <tr class="plsub plsub-cogs" style="display:none">
-            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Customer Success Mgr</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$2,317</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,817</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,721</td><td class="num" style="color:rgba(255,255,255,0.45)">-$6,950</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,915</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,635</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,562</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,519</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,552</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,552</td><td class="num" style="color:rgba(255,255,255,0.45)">-$5,793</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$1,611</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$42K</td>
-          </tr>
-          <tr class="plsub plsub-cogs" style="display:none">
-            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Interviewers & Talent</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$1,668</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,626</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,136</td><td class="num" style="color:rgba(255,255,255,0.45)">-$329</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,289</td><td class="num" style="color:rgba(255,255,255,0.45)">-$730</td><td class="num" style="color:rgba(255,255,255,0.45)">-$390</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,342</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,111</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,861</td><td class="num" style="color:rgba(255,255,255,0.45)">-$5,182</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,117</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$1,892</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$26K</td>
-          </tr>
-          <tr class="plsub plsub-cogs" style="display:none">
-            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Freelancers</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$3,412</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,753</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$922</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,244</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,233</td><td class="num" style="color:rgba(255,255,255,0.45)">-$892</td><td class="num" style="color:rgba(255,255,255,0.45)">-$73</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,840</td><td class="num" style="color:rgba(255,255,255,0.45)">-$108</td><td class="num" style="color:rgba(255,255,255,0.45)">-$649</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,400</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">—</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$15K</td>
-          </tr>
-          <tr class="plsub plsub-cogs" style="display:none">
-            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Referral Fees</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$1,000</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$250</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,950</td><td class="num" style="color:rgba(255,255,255,0.45)">-$300</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,581</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$250</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">—</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$4K</td>
-          </tr>
-          <!-- GROSS PROFIT -->
-          <tr style="background:rgba(34,197,94,0.04)">
-            <td style="padding-left:20px"><strong>Gross Profit</strong></td>
-            <td class="num">$45,402</td><td class="num">$66,984</td><td class="num">$76,488</td><td class="num">$96,882</td><td class="num">$78,208</td><td class="num">$80,646</td><td class="num">$78,891</td><td class="num">$76,073</td><td class="num">$60,601</td><td class="num">$41,796</td><td class="num">$64,455</td><td class="num">$94,507</td>
-            <td class="num">$39,426</td>
-            <td class="num" style="color:var(--green)"><strong>$855K</strong></td>
-          </tr>
-          <!-- OPEX -->
-          <tr>
-            <td><button class="plbtn plbtn-opex" onclick="togglePL('opex')" title="Expand OpEx breakdown">▶</button>OpEx</td>
-            <td class="num" style="color:var(--red)">-$23,471</td><td class="num" style="color:var(--red)">-$14,379</td><td class="num" style="color:var(--red)">-$33,822</td><td class="num" style="color:var(--red)">-$24,371</td><td class="num" style="color:var(--red)">-$22,291</td><td class="num" style="color:var(--red)">-$33,564</td><td class="num" style="color:var(--red)">-$26,937</td><td class="num" style="color:var(--red)">-$44,522</td><td class="num" style="color:var(--red)">-$25,642</td><td class="num" style="color:var(--red)">-$12,145</td><td class="num" style="color:var(--red)">-$8,569</td><td class="num" style="color:var(--red)">-$14,870</td>
-            <td class="num" style="color:var(--red)">-$18,254</td>
-            <td class="num" style="color:var(--red)">-$279K</td>
-          </tr>
-          <tr class="plsub plsub-opex" style="display:none">
-            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Software & Subscriptions</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$2,270</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,676</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,391</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,948</td><td class="num" style="color:rgba(255,255,255,0.45)">-$5,902</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,322</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,471</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,379</td><td class="num" style="color:rgba(255,255,255,0.45)">-$5,656</td><td class="num" style="color:rgba(255,255,255,0.45)">-$6,048</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,714</td><td class="num" style="color:rgba(255,255,255,0.45)">-$6,464</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$5,671</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$57K</td>
-          </tr>
-          <tr class="plsub plsub-opex" style="display:none">
-            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Recruit. Software</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$7,348</td><td class="num" style="color:rgba(255,255,255,0.45)">-$7,087</td><td class="num" style="color:rgba(255,255,255,0.45)">-$24,971</td><td class="num" style="color:rgba(255,255,255,0.45)">-$11,059</td><td class="num" style="color:rgba(255,255,255,0.45)">-$7,367</td><td class="num" style="color:rgba(255,255,255,0.45)">-$15,091</td><td class="num" style="color:rgba(255,255,255,0.45)">-$10,860</td><td class="num" style="color:rgba(255,255,255,0.45)">-$9,712</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,653</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">—</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$91K</td>
-          </tr>
-          <tr class="plsub plsub-opex" style="display:none">
-            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Stripe Fees</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$1,476</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,262</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,594</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,145</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,078</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,203</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,890</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,249</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,185</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,707</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,743</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,031</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$1,407</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$30K</td>
-          </tr>
-          <tr class="plsub plsub-opex" style="display:none">
-            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Ads</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$1,167</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$413</td><td class="num" style="color:rgba(255,255,255,0.45)">-$323</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,074</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,356</td><td class="num" style="color:rgba(255,255,255,0.45)">-$52</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,498</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,637</td><td class="num" style="color:rgba(255,255,255,0.45)">-$872</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,820</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$2,405</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$13K</td>
-          </tr>
-          <tr class="plsub plsub-opex" style="display:none">
-            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Travel</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$9,870</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">-$115</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,026</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,443</td><td class="num" style="color:rgba(255,255,255,0.45)">-$4,684</td><td class="num" style="color:rgba(255,255,255,0.45)">-$3,950</td><td class="num" style="color:rgba(255,255,255,0.45)">-$11,773</td><td class="num" style="color:rgba(255,255,255,0.45)">-$540</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td><td class="num" style="color:rgba(255,255,255,0.45)">—</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">—</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$27K</td>
-          </tr>
-          <tr class="plsub plsub-opex" style="display:none">
-            <td style="padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px">↳ Other</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$1,340</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,354</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,751</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,780</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,178</td><td class="num" style="color:rgba(255,255,255,0.45)">-$5,190</td><td class="num" style="color:rgba(255,255,255,0.45)">-$5,410</td><td class="num" style="color:rgba(255,255,255,0.45)">-$16,357</td><td class="num" style="color:rgba(255,255,255,0.45)">-$10,110</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,753</td><td class="num" style="color:rgba(255,255,255,0.45)">-$1,240</td><td class="num" style="color:rgba(255,255,255,0.45)">-$2,555</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$8,771</td>
-            <td class="num" style="color:rgba(255,255,255,0.45)">-$61K</td>
-          </tr>
-          <!-- OPERATING INCOME -->
-          <tr class="grand-total">
-            <td style="padding-left:20px">Operating Income</td>
-            <td class="num">$21,932</td><td class="num">$52,605</td><td class="num">$42,667</td><td class="num">$72,511</td><td class="num">$55,917</td><td class="num">$47,082</td><td class="num">$51,955</td><td class="num">$31,551</td><td class="num">$34,959</td><td class="num">$29,651</td><td class="num">$55,885</td><td class="num">$79,638</td>
-            <td class="num">$21,172</td>
-            <td class="num" style="color:var(--green)"><strong>$576K</strong></td>
-          </tr>
-          <!-- MARGINS -->
-          <tr>
-            <td style="color:var(--muted);padding-left:20px">Gross Margin</td>
-            <td class="num">81.6%</td><td class="num">85.3%</td><td class="num">93.7%</td><td class="num">92.4%</td><td class="num">95.7%</td><td class="num">90.8%</td><td class="num">89.1%</td><td class="num">89.7%</td><td class="num">76.9%</td><td class="num">79.7%</td><td class="num">80.8%</td><td class="num">84.7%</td>
-            <td class="num">78.6%</td>
-            <td class="num" style="color:var(--green)">86.4% avg</td>
-          </tr>
-          <tr>
-            <td style="color:var(--muted);padding-left:20px">Op. Margin</td>
-            <td class="num">39.4%</td><td class="num">67.0%</td><td class="num">52.3%</td><td class="num">69.1%</td><td class="num">68.4%</td><td class="num">53.0%</td><td class="num">58.7%</td><td class="num">37.2%</td><td class="num">44.3%</td><td class="num">56.6%</td><td class="num">70.0%</td><td class="num">71.4%</td>
-            <td class="num">42.2%</td>
-            <td class="num" style="color:var(--green)">57.5% avg</td>
-          </tr>
-        </tbody>
-      </table>
+      <table id="plTable"><thead></thead><tbody><tr><td>Loading…</td></tr></tbody></table>
     </div>
   </div>
 
@@ -1151,6 +1001,45 @@ let cogsTalent = [], cogsCSM = [], cogsInt = [], cogsFreel = [], cogsRef = [];
 let opexSoftware = [], opexRecruit = [], opexStripe = [], opexAds = [], opexTravel = [], opexOther = [];
 let BUDGET = { months: [], byMonth: {}, meta: {} };
 let RECEIVABLES = { invoices: [], totals: {}, meta: {} };
+let isForecast = []; // per-month boolean — true = forecast/projection, false = actuals
+
+// ── Forecast styling helpers (used by all charts) ─────────────
+// Per-bar background color: full opacity for actuals, faded for forecast
+function barColors(baseRGBA, fadedAlpha) {
+  // baseRGBA like 'rgba(19,144,235,0.75)' → returns array of colors per month
+  const matched = baseRGBA.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+  if (!matched) return isForecast.map(() => baseRGBA);
+  const r = matched[1], g = matched[2], b = matched[3];
+  return isForecast.map(fc => fc ? `rgba(${r},${g},${b},${fadedAlpha != null ? fadedAlpha : 0.22})` : baseRGBA);
+}
+// Per-bar border for forecast (dashed effect via thin border)
+function barBorders(borderRGB) {
+  return isForecast.map(fc => fc ? borderRGB : 'transparent');
+}
+// Line chart: segment.borderDash callback — dashes the segment if its endpoint is a forecast month
+function lineSegmentDash(p) {
+  // p.p0DataIndex, p.p1DataIndex (or p.p0.parsed.x etc.)
+  const i0 = p.p0DataIndex !== undefined ? p.p0DataIndex : (p.p0 && p.p0.parsed ? p.p0.parsed.x : 0);
+  const i1 = p.p1DataIndex !== undefined ? p.p1DataIndex : (p.p1 && p.p1.parsed ? p.p1.parsed.x : 0);
+  // Dash if either endpoint is forecast
+  if ((isForecast[i0] || isForecast[i1])) return [6, 4];
+  return undefined;
+}
+function pointRadiusForForecast(baseR) {
+  return isForecast.map(fc => fc ? Math.max(2, baseR - 1) : baseR);
+}
+// X-axis tick styling: italic + purple-tinted color for forecast labels
+function forecastTickConfig(baseSize) {
+  return {
+    color: ctx => isForecast[ctx.index] ? 'rgba(192,132,252,0.9)' : 'rgba(255,255,255,0.65)',
+    font: ctx => ({
+      family: "'DM Sans', sans-serif",
+      size: baseSize || 11,
+      style: isForecast[ctx.index] ? 'italic' : 'normal',
+      weight: isForecast[ctx.index] ? '700' : '400'
+    })
+  };
+}
 
 const fmtK = v => '$'+(v/1000).toFixed(0)+'k';
 const fmtAmt = v => '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -1316,12 +1205,25 @@ function updateKPIs() {
   const p = filterState.period;
   const pl = periodLabel(p);
   const ps = periodShort(p);
+  const fcSuffix = isForecast[p] ? ' · 🔮 FORECAST' : '';
+
+  // Forecast banner on the page (one shared element) — toggle visibility
+  let banner = document.getElementById('forecastBanner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'forecastBanner';
+    banner.style.cssText = 'background:rgba(192,132,252,0.12);border:1px solid rgba(192,132,252,0.35);color:#e9d5ff;padding:10px 18px;border-radius:8px;margin-bottom:12px;font-size:13px;display:flex;align-items:center;gap:10px';
+    banner.innerHTML = '<span style="font-family:\'Anton\',sans-serif;letter-spacing:1px;color:#c084fc">🔮 FORECAST</span><span>You are viewing a <b>projected month</b>. These figures are estimates, not actuals.</span>';
+    const tabsContainer = document.querySelector('nav');
+    if (tabsContainer && tabsContainer.parentNode) tabsContainer.parentNode.insertBefore(banner, tabsContainer.nextSibling);
+  }
+  banner.style.display = isForecast[p] ? 'flex' : 'none';
 
   // Revenue tab
   const rev = totalRev[p] || 0;
   const revPrior = p > 0 ? (totalRev[p-1] || 0) : 0;
   const revDelta = revPrior > 0 ? ((rev - revPrior) / revPrior * 100) : 0;
-  setText('kpiRevPeriodLabel', pl + ' Revenue');
+  setText('kpiRevPeriodLabel', pl + ' Revenue' + fcSuffix);
   setText('kpiRevPeriod', fmtUSD(rev));
   // Active Clients (trailing 90d ending at selected period)
   if (typeof activeClients90d !== 'undefined') {
@@ -1339,20 +1241,20 @@ function updateKPIs() {
   const opexV = opex[p] || 0;
   const cogsPct = rev > 0 ? (cogsV/rev*100).toFixed(1) : '0';
   const opexPct = rev > 0 ? (opexV/rev*100).toFixed(1) : '0';
-  setText('kpiCOGSLabel', 'COGS (' + ps + ')');
+  setText('kpiCOGSLabel', 'COGS (' + ps + ')' + (isForecast[p] ? ' 🔮' : ''));
   setText('kpiCOGS', fmtUSD(cogsV));
   setText('kpiCOGSDelta', cogsPct + '% of revenue');
-  setText('kpiOpExLabel', 'OpEx (' + ps + ')');
+  setText('kpiOpExLabel', 'OpEx (' + ps + ')' + (isForecast[p] ? ' 🔮' : ''));
   setText('kpiOpEx', fmtUSD(opexV));
   setText('kpiOpExDelta', opexPct + '% of revenue');
   // Total Expenses (period-driven)
   const totExp = cogsV + opexV;
   const totExpPct = rev > 0 ? (totExp/rev*100).toFixed(1) : '0';
-  setText('kpiExpTotalLabel', 'Total Expenses (' + ps + ')');
+  setText('kpiExpTotalLabel', 'Total Expenses (' + ps + ')' + (isForecast[p] ? ' 🔮' : ''));
   setText('kpiExpTotal', fmtUSD(totExp));
   setText('kpiExpTotalSub', totExpPct + '% of revenue · COGS + OpEx');
   // Top Vendor (period-driven)
-  setText('kpiTopVendorLabel', 'Top Vendor (' + ps + ')');
+  setText('kpiTopVendorLabel', 'Top Vendor (' + ps + ')' + (isForecast[p] ? ' 🔮' : ''));
   if (typeof MOM_DATA !== 'undefined' && MOM_DATA && MOM_DATA.expenses) {
     let bestV = 0, bestVendor = '—', bestCat = '';
     for (const r of MOM_DATA.expenses) {
@@ -1367,7 +1269,7 @@ function updateKPIs() {
   const opInc = operatingInc[p] || 0;
   const gm = grossMargin[p] || 0;
   const om = opMargin[p] || 0;
-  setText('kpiOpIncLabel', 'Operating Income (' + ps + ')');
+  setText('kpiOpIncLabel', 'Operating Income (' + ps + ')' + (isForecast[p] ? ' 🔮' : ''));
   setText('kpiOpInc', fmtUSD(opInc));
   setText('kpiOpIncSub', om.toFixed(1) + '% margin');
   setText('kpiOpMargin', om.toFixed(1) + '%');
@@ -1769,6 +1671,7 @@ async function loadData() {
 function applyData(D) {
   MONTHS = D.months || [];
   PERIOD_LABELS = D.PERIOD_LABELS || [];
+  isForecast = D.isForecast || (MONTHS.map(() => false));
   clientRev = D.clientRev || [];
   candidateRev = D.candidateRev || [];
   totalRev = D.totalRev || [];
@@ -1798,6 +1701,119 @@ function applyData(D) {
   rebuildFilterDropdowns();
   rebuildStaticKPIs();
   renderReceivables();
+  renderPLTable();
+}
+
+// ── P&L by Month dynamic renderer (with forecast styling) ──────
+function renderPLTable() {
+  const tbl = document.getElementById('plTable');
+  if (!tbl || !MONTHS || MONTHS.length === 0) return;
+  const n = MONTHS.length;
+  const sub = document.getElementById('plSub');
+  if (sub) sub.textContent = `Revenue, COGS, gross profit, OpEx, and operating income — ${MONTHS[0]} to ${MONTHS[n-1]}`;
+
+  const ttmStart = Math.max(0, n - 12);
+  const ttm = arr => arr.slice(ttmStart, n).reduce((s, v) => s + (v || 0), 0);
+  const fmtBig = v => {
+    const a = Math.abs(v);
+    if (a >= 1000) return (v < 0 ? '-' : '') + '$' + Math.round(a / 1000) + 'K';
+    return (v < 0 ? '-' : '') + '$' + Math.round(a);
+  };
+  const fmtNum = (v, isNeg) => {
+    if (v === 0 || v == null) return '—';
+    const abs = Math.abs(v);
+    const sign = (isNeg && v > 0) ? '-' : (v < 0 ? '-' : '');
+    return sign + '$' + Math.round(abs).toLocaleString();
+  };
+
+  function thMonth(label, i) {
+    const fcStyle = isForecast[i] ? 'font-style:italic;color:#c084fc;' : '';
+    return `<th class="num" style="${fcStyle}">${label}${isForecast[i] ? ' 🔮' : ''}</th>`;
+  }
+  function tdMonth(v, i, opts) {
+    opts = opts || {};
+    const fcStyle = isForecast[i] ? 'background:rgba(192,132,252,0.04);' : '';
+    const colorStyle = opts.color ? `color:${opts.color};` : '';
+    const text = opts.suffix ? (v == null || v === 0 ? '—' : (v).toFixed(1) + opts.suffix) : fmtNum(v, opts.negative);
+    return `<td class="num" style="${fcStyle}${colorStyle}">${text}</td>`;
+  }
+
+  let html = '<thead><tr><th>Line</th>';
+  for (let i = 0; i < n; i++) html += thMonth(MONTHS[i], i);
+  html += '<th class="num">TTM</th></tr></thead><tbody>';
+
+  // REVENUE
+  html += '<tr><td><button class="plbtn plbtn-rev" onclick="togglePL(\'rev\')" title="Expand revenue breakdown">▶</button><strong>Revenue</strong></td>';
+  for (let i = 0; i < n; i++) html += tdMonth(totalRev[i], i);
+  html += `<td class="num" style="color:var(--blue)"><strong>${fmtBig(ttm(totalRev))}</strong></td></tr>`;
+
+  const subStyle = 'padding-left:24px;color:rgba(255,255,255,0.5);font-size:12px';
+  const subValColor = 'rgba(255,255,255,0.45)';
+  html += `<tr class="plsub plsub-rev" style="display:none"><td style="${subStyle}">↳ Client Revenue</td>`;
+  for (let i = 0; i < n; i++) html += tdMonth(clientRev[i], i, { color: subValColor });
+  html += `<td class="num" style="color:${subValColor}">${fmtBig(ttm(clientRev))}</td></tr>`;
+
+  html += `<tr class="plsub plsub-rev" style="display:none"><td style="${subStyle}">↳ Candidate Revenue</td>`;
+  for (let i = 0; i < n; i++) html += tdMonth(candidateRev[i], i, { color: subValColor });
+  html += `<td class="num" style="color:${subValColor}">${fmtBig(ttm(candidateRev))}</td></tr>`;
+
+  const otherRev = totalRev.map((t, i) => (t || 0) - (clientRev[i] || 0) - (candidateRev[i] || 0));
+  if (otherRev.some(v => Math.abs(v) > 1)) {
+    html += `<tr class="plsub plsub-rev" style="display:none"><td style="${subStyle}">↳ Other (Placement, Referral, Refunds)</td>`;
+    for (let i = 0; i < n; i++) html += tdMonth(otherRev[i], i, { color: subValColor });
+    html += `<td class="num" style="color:${subValColor}">${fmtBig(ttm(otherRev))}</td></tr>`;
+  }
+
+  // COGS
+  html += '<tr><td><button class="plbtn plbtn-cogs" onclick="togglePL(\'cogs\')" title="Expand COGS breakdown">▶</button>COGS</td>';
+  for (let i = 0; i < n; i++) html += tdMonth(cogs[i], i, { color: 'var(--red)', negative: true });
+  html += `<td class="num" style="color:var(--red)">-${fmtBig(ttm(cogs))}</td></tr>`;
+
+  const cogsSubs = [['Talent Acquisition', cogsTalent], ['Customer Success Mgr', cogsCSM], ['Interviewers & Talent', cogsInt], ['Freelancers', cogsFreel], ['Referral Fees', cogsRef]];
+  for (const [label, arr] of cogsSubs) {
+    html += `<tr class="plsub plsub-cogs" style="display:none"><td style="${subStyle}">↳ ${label}</td>`;
+    for (let i = 0; i < n; i++) html += tdMonth(arr[i], i, { color: subValColor, negative: true });
+    html += `<td class="num" style="color:${subValColor}">-${fmtBig(ttm(arr))}</td></tr>`;
+  }
+
+  // GROSS PROFIT
+  const grossProfit = totalRev.map((t, i) => (t || 0) - (cogs[i] || 0));
+  html += '<tr style="background:rgba(34,197,94,0.04)"><td style="padding-left:20px"><strong>Gross Profit</strong></td>';
+  for (let i = 0; i < n; i++) html += tdMonth(grossProfit[i], i);
+  html += `<td class="num" style="color:var(--green)"><strong>${fmtBig(ttm(grossProfit))}</strong></td></tr>`;
+
+  // OPEX
+  html += '<tr><td><button class="plbtn plbtn-opex" onclick="togglePL(\'opex\')" title="Expand OpEx breakdown">▶</button>OpEx</td>';
+  for (let i = 0; i < n; i++) html += tdMonth(opex[i], i, { color: 'var(--red)', negative: true });
+  html += `<td class="num" style="color:var(--red)">-${fmtBig(ttm(opex))}</td></tr>`;
+
+  const opexSubs = [['Software & Subscriptions', opexSoftware], ['Recruit. Software', opexRecruit], ['Stripe Fees', opexStripe], ['Ads', opexAds], ['Travel', opexTravel], ['Other', opexOther]];
+  for (const [label, arr] of opexSubs) {
+    html += `<tr class="plsub plsub-opex" style="display:none"><td style="${subStyle}">↳ ${label}</td>`;
+    for (let i = 0; i < n; i++) html += tdMonth(arr[i], i, { color: subValColor, negative: true });
+    html += `<td class="num" style="color:${subValColor}">-${fmtBig(ttm(arr))}</td></tr>`;
+  }
+
+  // OPERATING INCOME
+  html += '<tr class="grand-total"><td style="padding-left:20px">Operating Income</td>';
+  for (let i = 0; i < n; i++) html += tdMonth(operatingInc[i], i);
+  html += `<td class="num" style="color:var(--green)"><strong>${fmtBig(ttm(operatingInc))}</strong></td></tr>`;
+
+  // MARGINS (weighted TTM average)
+  const ttmRev = ttm(totalRev), ttmGP = ttm(grossProfit), ttmOI = ttm(operatingInc);
+  const ttmGM = ttmRev > 0 ? (ttmGP / ttmRev * 100) : 0;
+  const ttmOM = ttmRev > 0 ? (ttmOI / ttmRev * 100) : 0;
+
+  html += '<tr><td style="color:var(--muted);padding-left:20px">Gross Margin</td>';
+  for (let i = 0; i < n; i++) html += tdMonth(grossMargin[i], i, { suffix: '%' });
+  html += `<td class="num" style="color:var(--green)">${ttmGM.toFixed(1)}% avg</td></tr>`;
+
+  html += '<tr><td style="color:var(--muted);padding-left:20px">Op. Margin</td>';
+  for (let i = 0; i < n; i++) html += tdMonth(opMargin[i], i, { suffix: '%' });
+  html += `<td class="num" style="color:var(--green)">${ttmOM.toFixed(1)}% avg</td></tr>`;
+
+  html += '</tbody>';
+  tbl.innerHTML = html;
 }
 
 // ── Receivables renderer ───────────────────────────────
@@ -1857,15 +1873,23 @@ function renderReceivables() {
 
 function rebuildFilterDropdowns() {
   const lastIdx = MONTHS.length - 1;
+  // Default selection: most-recent ACTUAL month (not a forecast)
+  let defaultIdx = lastIdx;
+  for (let i = lastIdx; i >= 0; i--) {
+    if (!isForecast[i]) { defaultIdx = i; break; }
+  }
   const buildOpts = (selectedIdx) =>
-    MONTHS.map((m, i) => `<option value="${i}"${i === selectedIdx ? ' selected' : ''}>${m}</option>`).join('');
+    MONTHS.map((m, i) => {
+      const suffix = isForecast[i] ? ' · Forecast' : '';
+      return `<option value="${i}"${i === selectedIdx ? ' selected' : ''}>${m}${suffix}</option>`;
+    }).join('');
   const periodEl = document.getElementById('fltPeriod');
   const rangeStartEl = document.getElementById('fltRangeStart');
   const rangeEndEl = document.getElementById('fltRangeEnd');
-  if (periodEl) periodEl.innerHTML = buildOpts(lastIdx);
+  if (periodEl) periodEl.innerHTML = buildOpts(defaultIdx);
   if (rangeStartEl) rangeStartEl.innerHTML = buildOpts(0);
   if (rangeEndEl) rangeEndEl.innerHTML = buildOpts(lastIdx);
-  filterState.period = lastIdx;
+  filterState.period = defaultIdx;
   filterState.rangeStart = 0;
   filterState.rangeEnd = lastIdx;
 }
@@ -1959,8 +1983,8 @@ defChart('revenue', 'revTypeChart', () => ({
   data: {
     labels: MONTHS,
     datasets: [
-      { label: 'Client Revenue', data: clientRev, backgroundColor: 'rgba(19,144,235,0.75)', borderRadius: 3, stack: 'rev' },
-      { label: 'Candidate Revenue', data: candidateRev, backgroundColor: 'rgba(34,197,94,0.65)', borderRadius: 3, stack: 'rev' }
+      { label: 'Client Revenue',    data: clientRev,    backgroundColor: barColors('rgba(19,144,235,0.75)'), borderRadius: 3, stack: 'rev' },
+      { label: 'Candidate Revenue', data: candidateRev, backgroundColor: barColors('rgba(34,197,94,0.65)'),  borderRadius: 3, stack: 'rev' }
     ]
   },
   options: {
@@ -1975,7 +1999,7 @@ defChart('revenue', 'revTypeChart', () => ({
       }
     },
     scales: {
-      x: { grid: { display: false }, stacked: true },
+      x: { grid: { display: false }, stacked: true, ticks: forecastTickConfig() },
       y: { stacked: true, ticks: { callback: v => fmtK(v) } }
     }
   }
@@ -2000,8 +2024,11 @@ defChart('financials', 'revVsOpChart', () => ({
   data: {
     labels: MONTHS,
     datasets: [
-      { type: 'bar', label: 'Revenue', data: totalRev, backgroundColor: 'rgba(19,144,235,0.3)', borderRadius: 3, yAxisID: 'y' },
-      { type: 'line', label: 'Operating Income', data: operatingInc, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', tension: 0.35, pointRadius: 3, borderWidth: 2, fill: true, yAxisID: 'y' }
+      { type: 'bar', label: 'Revenue', data: totalRev, backgroundColor: barColors('rgba(19,144,235,0.3)', 0.1), borderRadius: 3, yAxisID: 'y' },
+      { type: 'line', label: 'Operating Income', data: operatingInc,
+        borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', tension: 0.35,
+        pointRadius: pointRadiusForForecast(3), borderWidth: 2, fill: true, yAxisID: 'y',
+        segment: { borderDash: ctx => lineSegmentDash(ctx) } }
     ]
   },
   options: {
@@ -2016,7 +2043,7 @@ defChart('financials', 'revVsOpChart', () => ({
       }
     },
     scales: {
-      x: { grid: { display: false } },
+      x: { grid: { display: false }, ticks: forecastTickConfig() },
       y: { ticks: { callback: v => fmtK(v) } }
     }
   }
@@ -2028,8 +2055,12 @@ defChart('financials', 'marginChart', () => ({
   data: {
     labels: MONTHS,
     datasets: [
-      { label: 'Gross Margin', data: grossMargin, borderColor: '#1390eb', backgroundColor: 'rgba(19,144,235,0.1)', tension: 0.35, pointRadius: 3, borderWidth: 2 },
-      { label: 'Op. Margin', data: opMargin, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.08)', tension: 0.35, pointRadius: 3, borderWidth: 2 }
+      { label: 'Gross Margin', data: grossMargin, borderColor: '#1390eb', backgroundColor: 'rgba(19,144,235,0.1)',
+        tension: 0.35, pointRadius: pointRadiusForForecast(3), borderWidth: 2,
+        segment: { borderDash: ctx => lineSegmentDash(ctx) } },
+      { label: 'Op. Margin',   data: opMargin,   borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.08)',
+        tension: 0.35, pointRadius: pointRadiusForForecast(3), borderWidth: 2,
+        segment: { borderDash: ctx => lineSegmentDash(ctx) } }
     ]
   },
   options: {
@@ -2047,7 +2078,7 @@ defChart('financials', 'marginChart', () => ({
       }
     },
     scales: {
-      x: { grid: { display: false } },
+      x: { grid: { display: false }, ticks: forecastTickConfig() },
       y: { ticks: { callback: v => v + '%' }, min: 0, max: 100 }
     }
   }
@@ -2059,8 +2090,8 @@ defChart('expenses', 'expMonthlyChart', () => ({
   data: {
     labels: MONTHS,
     datasets: [
-      { label: 'COGS', data: cogs, backgroundColor: 'rgba(239,68,68,0.75)', borderRadius: 3, stack: 'exp' },
-      { label: 'OpEx', data: opex, backgroundColor: 'rgba(245,158,11,0.6)', borderRadius: 3, stack: 'exp' }
+      { label: 'COGS', data: cogs, backgroundColor: barColors('rgba(239,68,68,0.75)'), borderRadius: 3, stack: 'exp' },
+      { label: 'OpEx', data: opex, backgroundColor: barColors('rgba(245,158,11,0.6)'),  borderRadius: 3, stack: 'exp' }
     ]
   },
   options: {
@@ -2075,7 +2106,7 @@ defChart('expenses', 'expMonthlyChart', () => ({
       }
     },
     scales: {
-      x: { grid: { display: false }, stacked: true },
+      x: { grid: { display: false }, stacked: true, ticks: forecastTickConfig() },
       y: { stacked: true, ticks: { callback: v => fmtK(v) } }
     }
   }
@@ -2087,11 +2118,11 @@ defChart('expenses', 'cogsBreakChart', () => ({
   data: {
     labels: MONTHS,
     datasets: [
-      { label: 'Talent Acquisition', data: cogsTalent, backgroundColor: 'rgba(239,68,68,0.75)', borderRadius: 2, stack: 'c' },
-      { label: 'Customer Success Mgr', data: cogsCSM, backgroundColor: 'rgba(245,158,11,0.7)', borderRadius: 2, stack: 'c' },
-      { label: 'Interviewers & Talent', data: cogsInt, backgroundColor: 'rgba(192,132,252,0.7)', borderRadius: 2, stack: 'c' },
-      { label: 'Freelancers', data: cogsFreel, backgroundColor: 'rgba(253,224,71,0.6)', borderRadius: 2, stack: 'c' },
-      { label: 'Referral Fees', data: cogsRef, backgroundColor: 'rgba(34,197,94,0.5)', borderRadius: 2, stack: 'c' }
+      { label: 'Talent Acquisition',   data: cogsTalent, backgroundColor: barColors('rgba(239,68,68,0.75)'),  borderRadius: 2, stack: 'c' },
+      { label: 'Customer Success Mgr', data: cogsCSM,    backgroundColor: barColors('rgba(245,158,11,0.7)'),  borderRadius: 2, stack: 'c' },
+      { label: 'Interviewers & Talent',data: cogsInt,    backgroundColor: barColors('rgba(192,132,252,0.7)'), borderRadius: 2, stack: 'c' },
+      { label: 'Freelancers',          data: cogsFreel,  backgroundColor: barColors('rgba(253,224,71,0.6)'),  borderRadius: 2, stack: 'c' },
+      { label: 'Referral Fees',        data: cogsRef,    backgroundColor: barColors('rgba(34,197,94,0.5)'),   borderRadius: 2, stack: 'c' }
     ]
   },
   options: {
@@ -2106,7 +2137,7 @@ defChart('expenses', 'cogsBreakChart', () => ({
       }
     },
     scales: {
-      x: { grid: { display: false }, stacked: true, ticks: { font: { size: 10 } } },
+      x: { grid: { display: false }, stacked: true, ticks: forecastTickConfig(10) },
       y: { stacked: true, ticks: { callback: v => fmtK(v) } }
     }
   }
@@ -2118,12 +2149,12 @@ defChart('expenses', 'opexBreakChart', () => ({
   data: {
     labels: MONTHS,
     datasets: [
-      { label: 'Software', data: opexSoftware, backgroundColor: 'rgba(19,144,235,0.7)', borderRadius: 2, stack: 'o' },
-      { label: 'Recruit. Software', data: opexRecruit, backgroundColor: 'rgba(192,132,252,0.7)', borderRadius: 2, stack: 'o' },
-      { label: 'Stripe Fees', data: opexStripe, backgroundColor: 'rgba(245,158,11,0.65)', borderRadius: 2, stack: 'o' },
-      { label: 'Ads', data: opexAds, backgroundColor: 'rgba(34,197,94,0.55)', borderRadius: 2, stack: 'o' },
-      { label: 'Travel', data: opexTravel, backgroundColor: 'rgba(239,68,68,0.55)', borderRadius: 2, stack: 'o' },
-      { label: 'Other', data: opexOther, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 2, stack: 'o' }
+      { label: 'Software',          data: opexSoftware, backgroundColor: barColors('rgba(19,144,235,0.7)'),  borderRadius: 2, stack: 'o' },
+      { label: 'Recruit. Software', data: opexRecruit,  backgroundColor: barColors('rgba(192,132,252,0.7)'), borderRadius: 2, stack: 'o' },
+      { label: 'Stripe Fees',       data: opexStripe,   backgroundColor: barColors('rgba(245,158,11,0.65)'), borderRadius: 2, stack: 'o' },
+      { label: 'Ads',               data: opexAds,      backgroundColor: barColors('rgba(34,197,94,0.55)'),  borderRadius: 2, stack: 'o' },
+      { label: 'Travel',            data: opexTravel,   backgroundColor: barColors('rgba(239,68,68,0.55)'),  borderRadius: 2, stack: 'o' },
+      { label: 'Other',             data: opexOther,    backgroundColor: barColors('rgba(255,255,255,0.15)'),borderRadius: 2, stack: 'o' }
     ]
   },
   options: {
@@ -2138,7 +2169,7 @@ defChart('expenses', 'opexBreakChart', () => ({
       }
     },
     scales: {
-      x: { grid: { display: false }, stacked: true, ticks: { font: { size: 10 } } },
+      x: { grid: { display: false }, stacked: true, ticks: forecastTickConfig(10) },
       y: { stacked: true, ticks: { callback: v => fmtK(v) } }
     }
   }
