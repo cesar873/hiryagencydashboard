@@ -1086,16 +1086,49 @@ tr:last-child td { border-bottom: none; }
 <!-- ══════════════════════════════ RECEIVABLES ══ -->
 <div id="receivables" class="page">
 
-  <div class="panel" style="text-align:center;padding:60px 40px">
-    <div style="font-family:'Anton',sans-serif;font-size:24px;letter-spacing:1.5px;color:rgba(255,255,255,0.7);margin-bottom:14px">
-      RECEIVABLES DATA NOT YET CONNECTED
+  <div class="kpi-grid gap">
+    <div class="kpi">
+      <div class="label">Total Outstanding</div>
+      <div class="value" style="color:var(--amber)" id="recvTotalOutstanding">—</div>
+      <div class="delta" id="recvCount">—</div>
     </div>
-    <div style="color:var(--muted);font-size:14px;line-height:1.6;max-width:560px;margin:0 auto 24px">
-      Once you populate the <b style="color:var(--text)">Receivables</b> tab in your Google Sheet with open invoices,<br>
-      this tab will automatically show AR aging, overdue balances, and write-offs.
+    <div class="kpi">
+      <div class="label">Total Client Bill</div>
+      <div class="value" style="color:var(--blue)" id="recvTotalClientBill">—</div>
+      <div class="delta">underlying value invoiced to clients</div>
     </div>
-    <div style="display:inline-block;background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:8px;padding:14px 20px;text-align:left;font-family:'DM Sans';font-size:12px;color:var(--muted)">
-      Expected columns: <b style="color:var(--text)">Customer</b> · <b style="color:var(--text)">Invoice Date</b> · <b style="color:var(--text)">Due Date</b> · <b style="color:var(--text)">Amount</b> · <b style="color:var(--text)">Status</b>
+    <div class="kpi">
+      <div class="label">To Send</div>
+      <div class="value" id="recvToSend">—</div>
+      <div class="delta" id="recvToSendCount">—</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Sent / Awaiting Payment</div>
+      <div class="value" id="recvSent">—</div>
+      <div class="delta" id="recvSentCount">—</div>
+    </div>
+  </div>
+
+  <div class="panel gap">
+    <h2>Open Invoices</h2>
+    <p class="sub" id="recvSub">Live from the <b style="color:var(--text)">Receivables</b> tab in your Google Sheet</p>
+    <div class="tbl-scroll" style="margin-top:12px">
+      <table id="recvTbl" style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr>
+            <th>Invoice</th>
+            <th>Client</th>
+            <th>Candidate</th>
+            <th>Type</th>
+            <th class="num">Client Bill</th>
+            <th class="num">Commission</th>
+            <th class="num">Invoice Amount</th>
+            <th class="num">Days Overdue</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="recvTbody"><tr><td colspan="9" style="padding:40px;text-align:center;color:var(--muted)">Loading…</td></tr></tbody>
+      </table>
     </div>
   </div>
 
@@ -1117,6 +1150,7 @@ let cogs = [], opex = [];
 let cogsTalent = [], cogsCSM = [], cogsInt = [], cogsFreel = [], cogsRef = [];
 let opexSoftware = [], opexRecruit = [], opexStripe = [], opexAds = [], opexTravel = [], opexOther = [];
 let BUDGET = { months: [], byMonth: {}, meta: {} };
+let RECEIVABLES = { invoices: [], totals: {}, meta: {} };
 
 const fmtK = v => '$'+(v/1000).toFixed(0)+'k';
 const fmtAmt = v => '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -1760,8 +1794,65 @@ function applyData(D) {
   REV_TXNS = D.REV_TXNS || [];
   EXP_TXNS = D.EXP_TXNS || [];
   BUDGET = D.budget || { months: [], byMonth: {}, meta: {} };
+  RECEIVABLES = D.receivables || { invoices: [], totals: {}, meta: {} };
   rebuildFilterDropdowns();
   rebuildStaticKPIs();
+  renderReceivables();
+}
+
+// ── Receivables renderer ───────────────────────────────
+function renderReceivables() {
+  const tot = (RECEIVABLES && RECEIVABLES.totals) || {};
+  const inv = (RECEIVABLES && RECEIVABLES.invoices) || [];
+  const fmt0 = v => '$' + Math.round(v || 0).toLocaleString();
+  const byStatus = tot.byStatus || {};
+  const toSend = byStatus['To Send'] || 0;
+  const sent   = byStatus['Sent'] || byStatus['Awaiting Payment'] || 0;
+  const toSendCount = inv.filter(i => i.status === 'To Send').length;
+  const sentCount   = inv.filter(i => /^(sent|awaiting)/i.test(i.status)).length;
+
+  setText('recvTotalOutstanding', fmt0(tot.totalOutstanding));
+  setText('recvCount', (tot.count || 0) + ' open invoice' + ((tot.count || 0) === 1 ? '' : 's'));
+  setText('recvTotalClientBill', fmt0(tot.totalClientBill));
+  setText('recvToSend', fmt0(toSend));
+  setText('recvToSendCount', toSendCount + ' invoice' + (toSendCount === 1 ? '' : 's'));
+  setText('recvSent', fmt0(sent));
+  setText('recvSentCount', sentCount + ' invoice' + (sentCount === 1 ? '' : 's'));
+
+  const tbody = document.getElementById('recvTbody');
+  if (!tbody) return;
+  if (inv.length === 0) {
+    const errMsg = (RECEIVABLES.meta && RECEIVABLES.meta.error) || 'No invoices found.';
+    tbody.innerHTML = '<tr><td colspan="9" style="padding:40px;text-align:center;color:var(--muted)">' + escapeHtml(errMsg) + '</td></tr>';
+    return;
+  }
+
+  function statusPill(s) {
+    const v = (s || '').toLowerCase();
+    let cls = 'pill', color = 'rgba(255,255,255,0.06)', txt = 'var(--muted)';
+    if (v === 'to send')              { color = 'rgba(245,158,11,0.18)'; txt = '#f59e0b'; }
+    else if (/^(sent|awaiting)/.test(v)) { color = 'rgba(19,144,235,0.18)'; txt = '#1390eb'; }
+    else if (v === 'paid')            { color = 'rgba(34,197,94,0.18)';  txt = '#22c55e'; }
+    else if (/(overdue|late)/.test(v)){ color = 'rgba(239,68,68,0.18)';  txt = '#ef4444'; }
+    return '<span style="background:' + color + ';color:' + txt + ';font-size:10px;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700">' + escapeHtml(s || '—') + '</span>';
+  }
+
+  tbody.innerHTML = inv.map(r => {
+    const overdue = parseInt(r.daysOverdue, 10);
+    const overdueDisp = isNaN(overdue) ? '<span style="color:var(--muted)">—</span>'
+      : (overdue > 0 ? '<span style="color:var(--red)">' + overdue + 'd</span>' : '<span style="color:var(--muted)">—</span>');
+    return '<tr>' +
+      '<td style="font-family:\'DM Sans\';font-size:12px;color:var(--muted)">' + escapeHtml(r.invoiceNumber) + '</td>' +
+      '<td>' + escapeHtml(r.client) + '</td>' +
+      '<td style="color:rgba(255,255,255,0.7);font-size:13px">' + escapeHtml(r.candidate) + '</td>' +
+      '<td style="font-size:12px;color:var(--muted)">' + escapeHtml(r.type) + '</td>' +
+      '<td class="num">' + fmt0(r.clientBill) + '</td>' +
+      '<td class="num" style="color:var(--muted);font-size:12px">' + escapeHtml(r.commission) + '</td>' +
+      '<td class="num" style="font-weight:600">' + fmt0(r.invoiceAmount) + '</td>' +
+      '<td class="num">' + overdueDisp + '</td>' +
+      '<td>' + statusPill(r.status) + '</td>' +
+      '</tr>';
+  }).join('');
 }
 
 function rebuildFilterDropdowns() {

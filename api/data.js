@@ -96,6 +96,124 @@ function monthShort(parsed) {
   return `${parsed.monShort} ${String(parsed.year4).slice(2)}`;
 }
 
+// ── Receivables tab reader ──────────────────────────────────────
+async function fetchReceivablesData(sheets, sheetId, tabs) {
+  const tab = tabs.find(t => /^receivables$/i.test(t));
+  if (!tab) return { tab: null, invoices: [], totals: {}, meta: { error: 'No Receivables tab found' } };
+
+  let res;
+  try {
+    res = await sheets.spreadsheets.values.get({
+      spreadsheetId: sheetId,
+      range: `'${tab}'!A1:Z2000`,
+      valueRenderOption: 'FORMATTED_VALUE'
+    });
+  } catch (e) {
+    return { tab, invoices: [], totals: {}, meta: { error: 'Receivables read failed: ' + e.message } };
+  }
+  const rows = res.data.values || [];
+  if (rows.length === 0) {
+    return { tab, invoices: [], totals: {}, meta: { error: 'Tab is empty' } };
+  }
+
+  // Find header row — must contain "Client" and either "Invoice Amount" or "Invoice Number"
+  let headerIdx = -1;
+  let cols = null;
+  for (let i = 0; i < Math.min(rows.length, 20); i++) {
+    const row = (rows[i] || []).map(c => String(c || '').trim());
+    if (row.includes('Client') && (row.includes('Invoice Amount') || row.includes('Invoice Number'))) {
+      headerIdx = i;
+      cols = {
+        client:        row.indexOf('Client'),
+        candidate:     row.indexOf('Candidate'),
+        email:         row.indexOf('Email'),
+        type:          row.indexOf('Type'),
+        paymentMethod: row.indexOf('Payment Method'),
+        invoiceNumber: row.indexOf('Invoice Number'),
+        invoiceDate:   row.indexOf('Invoice Date'),
+        dueDate:       row.indexOf('Due Date'),
+        daysOverdue:   row.indexOf('Days Overdue'),
+        clientBill:    row.indexOf('Client Bill'),
+        commission:    row.indexOf('Commission'),
+        invoiceAmount: row.indexOf('Invoice Amount'),
+        status:        row.indexOf('Status'),
+        notes:         row.indexOf('Notes')
+      };
+      break;
+    }
+  }
+  if (headerIdx < 0) {
+    return { tab, invoices: [], totals: {}, meta: { error: 'Header row (Client / Invoice Number / Invoice Amount) not found' } };
+  }
+
+  function cell(row, i) { return i >= 0 ? String(row[i] || '').trim() : ''; }
+
+  const invoices = [];
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.length === 0) continue;
+    const client = cell(row, cols.client);
+    const invoiceNumber = cell(row, cols.invoiceNumber);
+    const invoiceAmount = num(cell(row, cols.invoiceAmount));
+    if (!client && !invoiceNumber && invoiceAmount === 0) continue;
+    if (!client && !invoiceNumber) continue;
+
+    invoices.push({
+      client,
+      candidate:     cell(row, cols.candidate),
+      email:         cell(row, cols.email),
+      type:          cell(row, cols.type),
+      paymentMethod: cell(row, cols.paymentMethod),
+      invoiceNumber,
+      invoiceDate:   cell(row, cols.invoiceDate),
+      dueDate:       cell(row, cols.dueDate),
+      daysOverdue:   cell(row, cols.daysOverdue),
+      clientBill:    num(cell(row, cols.clientBill)),
+      commission:    cell(row, cols.commission),
+      invoiceAmount,
+      status:        cell(row, cols.status) || '—',
+      notes:         cell(row, cols.notes)
+    });
+  }
+
+  // Totals
+  const byStatus = {};
+  let totalOutstanding = 0;
+  let totalClientBill = 0;
+  for (const inv of invoices) {
+    byStatus[inv.status] = (byStatus[inv.status] || 0) + inv.invoiceAmount;
+    // "Outstanding" = anything not yet "Paid" (or whatever we treat as closed)
+    if (!/^paid$/i.test(inv.status)) {
+      totalOutstanding += inv.invoiceAmount;
+    }
+    totalClientBill += inv.clientBill;
+  }
+
+  // Aging buckets (only meaningful if Days Overdue is populated as a number)
+  const aging = { '0-30': 0, '31-60': 0, '61-90': 0, '90+': 0, 'not_due': 0 };
+  for (const inv of invoices) {
+    const d = parseInt(inv.daysOverdue, 10);
+    if (isNaN(d) || d <= 0) { aging['not_due'] += inv.invoiceAmount; }
+    else if (d <= 30) { aging['0-30'] += inv.invoiceAmount; }
+    else if (d <= 60) { aging['31-60'] += inv.invoiceAmount; }
+    else if (d <= 90) { aging['61-90'] += inv.invoiceAmount; }
+    else { aging['90+'] += inv.invoiceAmount; }
+  }
+
+  return {
+    tab,
+    invoices,
+    totals: {
+      count: invoices.length,
+      totalOutstanding: Math.round(totalOutstanding * 100) / 100,
+      totalClientBill:  Math.round(totalClientBill * 100) / 100,
+      byStatus,
+      aging
+    },
+    meta: { invoiceCount: invoices.length }
+  };
+}
+
 // ── Budget tab reader (long-format) ─────────────────────────────
 async function fetchBudgetData(sheets, sheetId, tabs) {
   const budgetTab = tabs.find(t => /^budget$/i.test(t));
@@ -542,6 +660,8 @@ async function fetchSheetData() {
 
   // ── Budget tab read ──────────────────────────────────────────
   const budget = await fetchBudgetData(sheets, SHEET_ID, tabs);
+  // ── Receivables tab read ─────────────────────────────────────
+  const receivables = await fetchReceivablesData(sheets, SHEET_ID, tabs);
 
   return {
     months,
@@ -562,6 +682,7 @@ async function fetchSheetData() {
     REV_TXNS,
     EXP_TXNS,
     budget,
+    receivables,
     _meta: {
       fetchedAt: new Date().toISOString(),
       incomeTab,
@@ -571,7 +692,8 @@ async function fetchSheetData() {
       txnDebug,
       revenueEntities: MOM_DATA.revenue.length,
       expenseEntities: MOM_DATA.expenses.length,
-      budget: budget.meta
+      budget: budget.meta,
+      receivables: receivables.meta
     }
   };
 }
