@@ -8,8 +8,7 @@
 // per warm Lambda instance.
 
 import { google } from 'googleapis';
-
-const SHEET_ID = '13_ta2rPtKUNmVZwbZRWC3IbOwwipf89VIA3Q0oD1n5s';
+import { SHEET_ID, getSheetsClient, findReceivablesTab, findReceivablesHeader } from '../lib/sheets.js';
 const CACHE_TTL_SECONDS = 300; // 5 minutes
 const TRAILING_MONTHS = 13;    // dashboard shows last 13 months
 
@@ -94,124 +93,6 @@ function parseMonthCellGeneric(v) {
 }
 function monthShort(parsed) {
   return `${parsed.monShort} ${String(parsed.year4).slice(2)}`;
-}
-
-// ── Receivables tab reader ──────────────────────────────────────
-async function fetchReceivablesData(sheets, sheetId, tabs) {
-  const tab = tabs.find(t => /^receivables$/i.test(t));
-  if (!tab) return { tab: null, invoices: [], totals: {}, meta: { error: 'No Receivables tab found' } };
-
-  let res;
-  try {
-    res = await sheets.spreadsheets.values.get({
-      spreadsheetId: sheetId,
-      range: `'${tab}'!A1:Z2000`,
-      valueRenderOption: 'FORMATTED_VALUE'
-    });
-  } catch (e) {
-    return { tab, invoices: [], totals: {}, meta: { error: 'Receivables read failed: ' + e.message } };
-  }
-  const rows = res.data.values || [];
-  if (rows.length === 0) {
-    return { tab, invoices: [], totals: {}, meta: { error: 'Tab is empty' } };
-  }
-
-  // Find header row — must contain "Client" and either "Invoice Amount" or "Invoice Number"
-  let headerIdx = -1;
-  let cols = null;
-  for (let i = 0; i < Math.min(rows.length, 20); i++) {
-    const row = (rows[i] || []).map(c => String(c || '').trim());
-    if (row.includes('Client') && (row.includes('Invoice Amount') || row.includes('Invoice Number'))) {
-      headerIdx = i;
-      cols = {
-        client:        row.indexOf('Client'),
-        candidate:     row.indexOf('Candidate'),
-        email:         row.indexOf('Email'),
-        type:          row.indexOf('Type'),
-        paymentMethod: row.indexOf('Payment Method'),
-        invoiceNumber: row.indexOf('Invoice Number'),
-        invoiceDate:   row.indexOf('Invoice Date'),
-        dueDate:       row.indexOf('Due Date'),
-        daysOverdue:   row.indexOf('Days Overdue'),
-        clientBill:    row.indexOf('Client Bill'),
-        commission:    row.indexOf('Commission'),
-        invoiceAmount: row.indexOf('Invoice Amount'),
-        status:        row.indexOf('Status'),
-        notes:         row.indexOf('Notes')
-      };
-      break;
-    }
-  }
-  if (headerIdx < 0) {
-    return { tab, invoices: [], totals: {}, meta: { error: 'Header row (Client / Invoice Number / Invoice Amount) not found' } };
-  }
-
-  function cell(row, i) { return i >= 0 ? String(row[i] || '').trim() : ''; }
-
-  const invoices = [];
-  for (let i = headerIdx + 1; i < rows.length; i++) {
-    const row = rows[i];
-    if (!row || row.length === 0) continue;
-    const client = cell(row, cols.client);
-    const invoiceNumber = cell(row, cols.invoiceNumber);
-    const invoiceAmount = num(cell(row, cols.invoiceAmount));
-    if (!client && !invoiceNumber && invoiceAmount === 0) continue;
-    if (!client && !invoiceNumber) continue;
-
-    invoices.push({
-      client,
-      candidate:     cell(row, cols.candidate),
-      email:         cell(row, cols.email),
-      type:          cell(row, cols.type),
-      paymentMethod: cell(row, cols.paymentMethod),
-      invoiceNumber,
-      invoiceDate:   cell(row, cols.invoiceDate),
-      dueDate:       cell(row, cols.dueDate),
-      daysOverdue:   cell(row, cols.daysOverdue),
-      clientBill:    num(cell(row, cols.clientBill)),
-      commission:    cell(row, cols.commission),
-      invoiceAmount,
-      status:        cell(row, cols.status) || '—',
-      notes:         cell(row, cols.notes)
-    });
-  }
-
-  // Totals
-  const byStatus = {};
-  let totalOutstanding = 0;
-  let totalClientBill = 0;
-  for (const inv of invoices) {
-    byStatus[inv.status] = (byStatus[inv.status] || 0) + inv.invoiceAmount;
-    // "Outstanding" = anything not yet "Paid" (or whatever we treat as closed)
-    if (!/^paid$/i.test(inv.status)) {
-      totalOutstanding += inv.invoiceAmount;
-    }
-    totalClientBill += inv.clientBill;
-  }
-
-  // Aging buckets (only meaningful if Days Overdue is populated as a number)
-  const aging = { '0-30': 0, '31-60': 0, '61-90': 0, '90+': 0, 'not_due': 0 };
-  for (const inv of invoices) {
-    const d = parseInt(inv.daysOverdue, 10);
-    if (isNaN(d) || d <= 0) { aging['not_due'] += inv.invoiceAmount; }
-    else if (d <= 30) { aging['0-30'] += inv.invoiceAmount; }
-    else if (d <= 60) { aging['31-60'] += inv.invoiceAmount; }
-    else if (d <= 90) { aging['61-90'] += inv.invoiceAmount; }
-    else { aging['90+'] += inv.invoiceAmount; }
-  }
-
-  return {
-    tab,
-    invoices,
-    totals: {
-      count: invoices.length,
-      totalOutstanding: Math.round(totalOutstanding * 100) / 100,
-      totalClientBill:  Math.round(totalClientBill * 100) / 100,
-      byStatus,
-      aging
-    },
-    meta: { invoiceCount: invoices.length }
-  };
 }
 
 // ── Budget tab reader (long-format) ─────────────────────────────
@@ -320,31 +201,100 @@ async function fetchBudgetData(sheets, sheetId, tabs) {
   };
 }
 
-// ── Sheet read ──────────────────────────────────────────────────
-async function authClient() {
-  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!raw) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON env var is not set');
-  let credentials;
+// ── Receivables / Cash Flow reader ──────────────────────────────
+async function fetchReceivablesData(sheets, tabs) {
+  const tab = await findReceivablesTab(sheets) || tabs.find(t => /^receivable/i.test(t));
+  if (!tab) return { tab: null, invoices: [], meta: { error: 'No Receivables tab found' } };
+
+  let res;
   try {
-    credentials = JSON.parse(raw);
+    res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: `'${tab}'!A1:AZ500`,
+      valueRenderOption: 'FORMATTED_VALUE'
+    });
   } catch (e) {
-    throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON is not valid JSON: ' + e.message);
+    return { tab, invoices: [], meta: { error: 'Read failed: ' + e.message } };
   }
-  if (!credentials.client_email || !credentials.private_key) {
-    throw new Error('Service account JSON is missing client_email or private_key');
+  const rows = res.data.values || [];
+  const found = findReceivablesHeader(rows);
+  if (!found) {
+    return { tab, invoices: [], meta: { error: 'Header row (Candidate Name / Client Name / Billed) not found' } };
   }
-  const auth = new google.auth.JWT({
-    email: credentials.client_email,
-    key: credentials.private_key,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
-  });
-  await auth.authorize();
-  return auth;
+  const { headerRowIdx, cols } = found;
+
+  const invoices = [];
+  for (let i = headerRowIdx + 1; i < rows.length; i++) {
+    const row = rows[i] || [];
+    const candidate = String(row[cols.candidateName] || '').trim();
+    const client = String(row[cols.clientName] || '').trim();
+    if (!candidate && !client) continue; // skip empty rows
+    const invoiceDateRaw = String(row[cols.invoiceDate] || '').trim();
+    const billedRaw = String(row[cols.billed] || '').trim();
+    if (!candidate && !invoiceDateRaw) continue;
+
+    const approvedRaw = String(row[cols.approved] || '').trim().toLowerCase();
+    let approved = false;
+    if (approvedRaw === 'true' || approvedRaw === 'yes' || approvedRaw === '1' || approvedRaw === 'approved') approved = true;
+
+    const sentRaw = String(row[cols.sent] || '').trim();
+    let sentState = 'pipeline';        // empty
+    if (sentRaw) {
+      const sLower = sentRaw.toLowerCase();
+      if (sLower === 'paid') sentState = 'paid';
+      else if (sLower === 'overdue') sentState = 'overdue';
+      else if (sLower === 'sent' || /^\d/.test(sentRaw) || sLower.includes('sent')) sentState = 'sent';
+      else sentState = sLower;
+    }
+
+    const billed = num(billedRaw);
+    const commissionRaw = String(row[cols.commission] || '').trim();
+    const commission = commissionRaw; // keep as string e.g. "10%"
+    const commissionPct = num(commissionRaw); // also parsed as number
+
+    // Per-month amounts (commission $ to be collected per month)
+    const monthsData = {};
+    for (const mc of cols.monthCols) {
+      const v = num(row[mc.colIdx]);
+      if (Math.abs(v) > 0.01) monthsData[mc.label] = v;
+    }
+
+    invoices.push({
+      rowNumber: i + 1, // 1-indexed for Sheets API
+      invoiceDate: invoiceDateRaw,
+      invoiceNum: String(row[cols.invoiceNum] || '').trim(),
+      candidate,
+      client,
+      notes: String(row[cols.notes] || '').trim(),
+      currency: String(row[cols.currency] || '').trim() || 'USD',
+      billed,
+      commission, // "10%"
+      commissionPct,
+      approved,
+      sentRaw,
+      sentState, // pipeline | sent | paid | overdue
+      months: monthsData
+    });
+  }
+
+  return {
+    tab,
+    invoices,
+    cols, // include for the write endpoints to use
+    headerRowIdx,
+    meta: {
+      total: invoices.length,
+      pipeline: invoices.filter(x => x.sentState === 'pipeline').length,
+      sent: invoices.filter(x => x.sentState === 'sent').length,
+      paid: invoices.filter(x => x.sentState === 'paid').length,
+      overdue: invoices.filter(x => x.sentState === 'overdue').length
+    }
+  };
 }
 
+// ── Sheet read ──────────────────────────────────────────────────
 async function fetchSheetData() {
-  const auth = await authClient();
-  const sheets = google.sheets({ version: 'v4', auth });
+  const sheets = await getSheetsClient();
 
   // Discover tab names
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
@@ -680,8 +630,10 @@ async function fetchSheetData() {
 
   // ── Budget tab read ──────────────────────────────────────────
   const budget = await fetchBudgetData(sheets, SHEET_ID, tabs);
+
+  // ── Receivables / Cash Flow tab read ────────────────────────
   // ── Receivables tab read ─────────────────────────────────────
-  const receivables = await fetchReceivablesData(sheets, SHEET_ID, tabs);
+  const receivables = await fetchReceivablesData(sheets, tabs);
 
   return {
     months,

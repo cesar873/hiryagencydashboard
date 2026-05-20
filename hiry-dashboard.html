@@ -468,7 +468,7 @@ tr:last-child td { border-bottom: none; }
   <button class="tab-btn active" onclick="showTab(this,'financials')">Financials</button>
   <button class="tab-btn" onclick="showTab(this,'revenue')">Revenue</button>
   <button class="tab-btn" onclick="showTab(this,'expenses')">Expenses</button>
-  <button class="tab-btn" onclick="showTab(this,'receivables')">Receivables</button>
+  <button class="tab-btn" onclick="showTab(this,'receivables')">Cash Flow</button>
 </nav>
 
 <!-- ══════════════════════════════ REVENUE ══ -->
@@ -933,52 +933,98 @@ tr:last-child td { border-bottom: none; }
 
 
 
-<!-- ══════════════════════════════ RECEIVABLES ══ -->
+<!-- ══════════════════════════════ CASH FLOW (formerly Receivables) ══ -->
 <div id="receivables" class="page">
 
-  <div class="kpi-grid gap">
+  <div class="panel gap" style="margin-bottom:14px;padding:20px 24px">
+    <div style="font-size:11px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:6px">Accounts Receivable</div>
+    <h2 style="font-family:'Anton',sans-serif;font-size:38px;letter-spacing:1.5px;margin:0">CASH FLOW</h2>
+    <p class="sub" id="cfSub" style="margin-top:4px">— · live from the Receivables tab</p>
+  </div>
+
+  <!-- 5 KPI cards -->
+  <div class="kpi-grid gap" id="cfKpiGrid" style="grid-template-columns:repeat(5,1fr)">
     <div class="kpi">
-      <div class="label">Total Outstanding</div>
-      <div class="value" style="color:var(--amber)" id="recvTotalOutstanding">—</div>
-      <div class="delta" id="recvCount">—</div>
+      <div class="label">Outstanding AR</div>
+      <div class="value" style="color:var(--amber)" id="cfOutstanding">—</div>
+      <div class="delta" id="cfOutstandingSub">— open invoices</div>
     </div>
     <div class="kpi">
-      <div class="label">Total Client Bill</div>
-      <div class="value" style="color:var(--blue)" id="recvTotalClientBill">—</div>
-      <div class="delta">underlying value invoiced to clients</div>
+      <div class="label">Overdue</div>
+      <div class="value" style="color:var(--red)" id="cfOverdue">—</div>
+      <div class="delta down" id="cfOverdueSub">—</div>
     </div>
     <div class="kpi">
-      <div class="label">To Send</div>
-      <div class="value" id="recvToSend">—</div>
-      <div class="delta" id="recvToSendCount">—</div>
+      <div class="label">Due Next 7 Days</div>
+      <div class="value" id="cfDue7">—</div>
+      <div class="delta" id="cfDue7Sub">—</div>
     </div>
     <div class="kpi">
-      <div class="label">Sent / Awaiting Payment</div>
-      <div class="value" id="recvSent">—</div>
-      <div class="delta" id="recvSentCount">—</div>
+      <div class="label">Pipeline (Pre-Send)</div>
+      <div class="value" style="color:var(--blue)" id="cfPipeline">—</div>
+      <div class="delta" id="cfPipelineSub">—</div>
+    </div>
+    <div class="kpi">
+      <div class="label" id="cfCollectedLabel">Collected · —</div>
+      <div class="value" style="color:var(--green)" id="cfCollected">—</div>
+      <div class="delta" id="cfCollectedSub">—</div>
     </div>
   </div>
 
-  <div class="panel gap">
-    <h2>Open Invoices</h2>
-    <p class="sub" id="recvSub">Live from the <b style="color:var(--text)">Receivables</b> tab in your Google Sheet</p>
-    <div class="tbl-scroll" style="margin-top:12px">
-      <table id="recvTbl" style="width:100%;border-collapse:collapse">
-        <thead>
-          <tr>
-            <th>Invoice</th>
-            <th>Client</th>
-            <th>Candidate</th>
-            <th>Type</th>
-            <th class="num">Client Bill</th>
-            <th class="num">Commission</th>
-            <th class="num">Invoice Amount</th>
-            <th class="num">Days Overdue</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="recvTbody"><tr><td colspan="9" style="padding:40px;text-align:center;color:var(--muted)">Loading…</td></tr></tbody>
-      </table>
+  <!-- Two panels: Pipeline (left) + Outstanding (right) -->
+  <div class="grid-12 gap" style="grid-template-columns:1.4fr 1fr;gap:16px;display:grid">
+    <!-- PIPELINE -->
+    <div class="panel" style="padding:20px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+        <div>
+          <div style="font-size:11px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase">Pipeline</div>
+          <h2 style="font-family:'Anton',sans-serif;font-size:22px;letter-spacing:1px;margin:4px 0 0">UPCOMING INVOICES</h2>
+        </div>
+        <button class="refresh" id="cfBreakdownToggle" onclick="toggleCfBreakdown()" style="font-size:11px;padding:6px 12px">👁 Show breakdown</button>
+      </div>
+      <div class="tbl-scroll-y" style="max-height:540px">
+        <table style="width:100%;border-collapse:collapse" id="cfPipelineTbl">
+          <thead></thead>
+          <tbody><tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- OUTSTANDING -->
+    <div class="panel" style="padding:20px">
+      <div style="font-size:11px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase">Outstanding Invoices</div>
+      <div style="font-family:'Anton',sans-serif;font-size:32px;letter-spacing:1.5px;margin-top:4px" id="cfOutstandingHead">—</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:4px" id="cfOutstandingHeadSub">— sent, not yet collected</div>
+
+      <div style="display:flex;align-items:center;gap:24px;margin-top:24px">
+        <div style="width:160px;height:160px;position:relative;flex-shrink:0">
+          <canvas id="cfDonut"></canvas>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px">Open</div>
+            <div style="font-family:'Anton',sans-serif;font-size:20px;letter-spacing:0.5px" id="cfDonutCenter">—</div>
+          </div>
+        </div>
+        <div style="flex:1;font-size:13px" id="cfDonutLegend"></div>
+      </div>
+
+      <div style="margin-top:24px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <div style="font-size:11px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase">Sent & Unpaid</div>
+          <div style="font-size:10px;color:var(--muted)">click any row for details</div>
+        </div>
+        <div class="tbl-scroll-y" style="max-height:280px;margin-top:8px">
+          <table style="width:100%;border-collapse:collapse" id="cfOutstandingTbl">
+            <thead><tr style="border-bottom:1px solid var(--card-border)">
+              <th style="text-align:left;padding:8px 10px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Client</th>
+              <th style="text-align:left;padding:8px 10px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Candidate</th>
+              <th class="num" style="padding:8px 10px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Amount</th>
+              <th class="num" style="padding:8px 10px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Due</th>
+              <th style="padding:8px 10px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Age</th>
+            </tr></thead>
+            <tbody><tr><td colspan="5" style="padding:30px;text-align:center;color:var(--muted)">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1817,58 +1863,305 @@ function renderPLTable() {
 }
 
 // ── Receivables renderer ───────────────────────────────
+// ── Cash Flow tab: render KPIs + Pipeline + Outstanding ─────
+let cfShowBreakdown = false;
+let cfDonutChart = null;
+
+function toggleCfBreakdown() {
+  cfShowBreakdown = !cfShowBreakdown;
+  const btn = document.getElementById('cfBreakdownToggle');
+  if (btn) btn.textContent = cfShowBreakdown ? '👁 Hide breakdown' : '👁 Show breakdown';
+  renderReceivables();
+}
+
+// Parse "20/05/2026" or "2026-05-20" into a Date
+function parseDDMMYYYY(s) {
+  if (!s) return null;
+  const v = String(s).trim();
+  let m = v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) return new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]));
+  m = v.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if (m) return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+  return null;
+}
+
 function renderReceivables() {
-  const tot = (RECEIVABLES && RECEIVABLES.totals) || {};
-  const inv = (RECEIVABLES && RECEIVABLES.invoices) || [];
+  const data = (RECEIVABLES && RECEIVABLES.invoices) || [];
   const fmt0 = v => '$' + Math.round(v || 0).toLocaleString();
-  const byStatus = tot.byStatus || {};
-  const toSend = byStatus['To Send'] || 0;
-  const sent   = byStatus['Sent'] || byStatus['Awaiting Payment'] || 0;
-  const toSendCount = inv.filter(i => i.status === 'To Send').length;
-  const sentCount   = inv.filter(i => /^(sent|awaiting)/i.test(i.status)).length;
+  const fmtK = v => {
+    const a = Math.abs(v || 0);
+    if (a >= 1000) return (v < 0 ? '-' : '') + '$' + (a / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+    return '$' + Math.round(a);
+  };
+  const today = new Date();
 
-  setText('recvTotalOutstanding', fmt0(tot.totalOutstanding));
-  setText('recvCount', (tot.count || 0) + ' open invoice' + ((tot.count || 0) === 1 ? '' : 's'));
-  setText('recvTotalClientBill', fmt0(tot.totalClientBill));
-  setText('recvToSend', fmt0(toSend));
-  setText('recvToSendCount', toSendCount + ' invoice' + (toSendCount === 1 ? '' : 's'));
-  setText('recvSent', fmt0(sent));
-  setText('recvSentCount', sentCount + ' invoice' + (sentCount === 1 ? '' : 's'));
+  // Sub-text
+  const periodLabel = MONTHS[filterState.period] || '—';
+  const sub = document.getElementById('cfSub');
+  if (sub) sub.textContent = periodLabel + ' · live from the Receivables tab';
 
-  const tbody = document.getElementById('recvTbody');
-  if (!tbody) return;
-  if (inv.length === 0) {
-    const errMsg = (RECEIVABLES.meta && RECEIVABLES.meta.error) || 'No invoices found.';
-    tbody.innerHTML = '<tr><td colspan="9" style="padding:40px;text-align:center;color:var(--muted)">' + escapeHtml(errMsg) + '</td></tr>';
-    return;
+  // Each invoice's "amount" for KPI purposes = commission amount (what Hiry collects)
+  // Use the matching month column if present, else commission% × billed
+  function invoiceAmount(inv) {
+    // months object has { 'May 2026': 100.00 }
+    if (inv.months && Object.keys(inv.months).length > 0) {
+      // sum across all month entries (typical case: one month per invoice)
+      return Object.values(inv.months).reduce((s, v) => s + v, 0);
+    }
+    if (inv.commissionPct && inv.billed) return inv.commissionPct * inv.billed / 100;
+    return 0;
+  }
+  function invoiceClientBill(inv) { return inv.billed || 0; }
+
+  // Categorize
+  const pipeline = data.filter(i => i.sentState === 'pipeline');
+  const outstanding = data.filter(i => i.sentState === 'sent' || i.sentState === 'overdue');
+  const paid = data.filter(i => i.sentState === 'paid');
+
+  // Pipeline subgroups
+  const awaitingReview = pipeline.filter(i => !i.approved);
+  const readyToSend = pipeline.filter(i => i.approved);
+
+  // KPI totals
+  const outstandingTotal = outstanding.reduce((s, i) => s + invoiceAmount(i), 0);
+  const overdueInvs = data.filter(i => i.sentState === 'overdue');
+  const overdueTotal = overdueInvs.reduce((s, i) => s + invoiceAmount(i), 0);
+  const pipelineTotal = pipeline.reduce((s, i) => s + invoiceClientBill(i), 0);
+
+  // Worst overdue age (days since invoice date)
+  let worstOverdue = 0;
+  for (const i of overdueInvs) {
+    const dt = parseDDMMYYYY(i.invoiceDate);
+    if (dt) {
+      const days = Math.floor((today - dt) / 86400000);
+      if (days > worstOverdue) worstOverdue = days;
+    }
   }
 
-  function statusPill(s) {
-    const v = (s || '').toLowerCase();
-    let cls = 'pill', color = 'rgba(255,255,255,0.06)', txt = 'var(--muted)';
-    if (v === 'to send')              { color = 'rgba(245,158,11,0.18)'; txt = '#f59e0b'; }
-    else if (/^(sent|awaiting)/.test(v)) { color = 'rgba(19,144,235,0.18)'; txt = '#1390eb'; }
-    else if (v === 'paid')            { color = 'rgba(34,197,94,0.18)';  txt = '#22c55e'; }
-    else if (/(overdue|late)/.test(v)){ color = 'rgba(239,68,68,0.18)';  txt = '#ef4444'; }
-    return '<span style="background:' + color + ';color:' + txt + ';font-size:10px;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.5px;font-weight:700">' + escapeHtml(s || '—') + '</span>';
+  // Due next 7 days — heuristic: invoices in current pipeline scheduled for current month
+  // Since we don't have explicit due dates yet, show 0 with a "—" sub
+  const due7 = 0;
+
+  // Collected this period (paid invoices with paid date in selected month)
+  // For now: count all paid invoices' commission as collected (sheet doesn't yet track paid date)
+  const collectedTotal = paid.reduce((s, i) => s + invoiceAmount(i), 0);
+
+  // Update KPI cards
+  setText('cfOutstanding', fmtK(outstandingTotal));
+  setText('cfOutstandingSub', '— ' + outstanding.length + ' open invoice' + (outstanding.length === 1 ? '' : 's'));
+  setText('cfOverdue', fmtK(overdueTotal));
+  setText('cfOverdueSub', overdueInvs.length > 0 ? `— ${overdueInvs.length} late · worst ${worstOverdue}d` : '— none overdue');
+  setText('cfDue7', due7 ? fmtK(due7) : '$0');
+  setText('cfDue7Sub', '— nothing imminent');
+  setText('cfPipeline', fmtK(pipelineTotal));
+  setText('cfPipelineSub', '— ' + pipeline.length + ' drafts + ready');
+  setText('cfCollectedLabel', 'Collected · ' + periodLabel);
+  setText('cfCollected', fmtK(collectedTotal));
+  setText('cfCollectedSub', paid.length > 0 ? '— ' + paid.length + ' paid' : '— 0 paid');
+
+  setText('cfOutstandingHead', fmtK(outstandingTotal));
+  const overdueText = overdueInvs.length > 0
+    ? outstanding.length + ' sent, not yet collected · <span style="color:var(--red)">' + fmtK(overdueTotal) + ' overdue</span>'
+    : outstanding.length + ' sent, not yet collected';
+  const headSub = document.getElementById('cfOutstandingHeadSub');
+  if (headSub) headSub.innerHTML = overdueText;
+
+  // ── Pipeline table ─────────────────────────
+  const pipeTbl = document.getElementById('cfPipelineTbl');
+  if (pipeTbl) {
+    const thead = pipeTbl.querySelector('thead');
+    const tbody = pipeTbl.querySelector('tbody');
+
+    const cols = cfShowBreakdown
+      ? ['Date','Client','Candidate','Service','Currency','Billed','Commission','Notes']
+      : ['Date','Client','Candidate','Notes','Amount','Status','Actions'];
+
+    thead.innerHTML = '<tr style="border-bottom:1px solid var(--card-border)">' +
+      cols.map((c, idx) => {
+        const align = (c === 'Billed' || c === 'Amount' || c === 'Commission') ? ' class="num"' : '';
+        return `<th${align} style="text-align:${align ? 'right' : 'left'};padding:10px 12px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">${c}</th>`;
+      }).join('') + '</tr>';
+
+    function renderPipeRow(inv) {
+      const dt = parseDDMMYYYY(inv.invoiceDate);
+      const dateStr = dt
+        ? `${dt.toLocaleString('en-US', { month: 'short' }).toUpperCase()} ${dt.getDate()}`
+        : (inv.invoiceDate || '—');
+      const amount = invoiceAmount(inv);
+
+      if (cfShowBreakdown) {
+        return '<tr style="border-bottom:1px solid rgba(255,255,255,0.04)">' +
+          `<td style="padding:10px 12px;font-size:11px;color:var(--muted);letter-spacing:0.6px;text-transform:uppercase">${escapeHtml(dateStr)}</td>` +
+          `<td style="padding:10px 12px;font-size:13px">${escapeHtml(inv.client)}</td>` +
+          `<td style="padding:10px 12px;font-size:13px;color:rgba(255,255,255,0.7)">${escapeHtml(inv.candidate)}</td>` +
+          `<td style="padding:10px 12px;font-size:13px;color:var(--muted)">Placement</td>` +
+          `<td style="padding:10px 12px;font-size:13px;color:var(--muted)">${escapeHtml(inv.currency)}</td>` +
+          `<td class="num" style="padding:10px 12px;font-size:13px">${fmt0(inv.billed)}</td>` +
+          `<td class="num" style="padding:10px 12px;font-size:13px;color:var(--muted)">${escapeHtml(inv.commission)}</td>` +
+          `<td style="padding:10px 12px;font-size:12px;color:var(--muted);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(inv.notes)}">${escapeHtml(inv.notes || '—')}</td>` +
+          '</tr>';
+      }
+
+      const statusPill = inv.approved
+        ? '<span style="background:rgba(19,144,235,0.18);color:#1390eb;font-size:10px;padding:3px 10px;border-radius:4px;text-transform:uppercase;letter-spacing:0.7px;font-weight:700">Ready to Send</span>'
+        : '<span style="background:rgba(192,132,252,0.18);color:#c084fc;font-size:10px;padding:3px 10px;border-radius:4px;text-transform:uppercase;letter-spacing:0.7px;font-weight:700">Client Review</span>';
+
+      const actions = inv.approved
+        ? '<button class="approve-btn" disabled style="background:rgba(34,197,94,0.18);color:#22c55e;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:default">✓ Approved</button>'
+        : `<button class="approve-btn" onclick="approveInvoice(${inv.rowNumber}, ${JSON.stringify(inv.candidate).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.client).replace(/"/g, '&quot;')}, this)" style="background:#1390eb;color:white;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">✓ Approve</button>`;
+
+      const noteEditable = `<input type="text" value="${escapeHtml(inv.notes || '')}" onblur="saveNote(${inv.rowNumber}, ${JSON.stringify(inv.candidate).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.client).replace(/"/g, '&quot;')}, this.value, this)" placeholder="Add note…" style="background:transparent;border:1px solid transparent;color:rgba(255,255,255,0.85);font-size:12px;padding:4px 6px;border-radius:4px;width:100%;font-family:'DM Sans',sans-serif" onfocus="this.style.borderColor='rgba(255,255,255,0.2)'" onblur_styling="this.style.borderColor='transparent'"/>`;
+
+      return '<tr style="border-bottom:1px solid rgba(255,255,255,0.04)">' +
+        `<td style="padding:10px 12px;font-size:11px;color:var(--muted);letter-spacing:0.6px;text-transform:uppercase">${escapeHtml(dateStr)}</td>` +
+        `<td style="padding:10px 12px;font-size:13px">${escapeHtml(inv.client)}</td>` +
+        `<td style="padding:10px 12px;font-size:13px;color:rgba(255,255,255,0.7)">${escapeHtml(inv.candidate)}</td>` +
+        `<td style="padding:10px 12px;font-size:12px;min-width:140px">${noteEditable}</td>` +
+        `<td class="num" style="padding:10px 12px;font-size:13px;font-weight:600">${fmt0(amount)}</td>` +
+        `<td style="padding:10px 12px">${statusPill}</td>` +
+        `<td style="padding:10px 12px">${actions}</td>` +
+        '</tr>';
+    }
+
+    function sectionHeader(label, count, hint, color) {
+      const colspan = cols.length;
+      return `<tr><td colspan="${colspan}" style="padding:14px 12px 6px;background:rgba(255,255,255,0.02)">` +
+        `<div style="font-family:'Anton',sans-serif;font-size:13px;letter-spacing:1px;color:${color}">${label} · ${count}</div>` +
+        (hint ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${hint}</div>` : '') +
+        '</td></tr>';
+    }
+
+    let html = '';
+    if (awaitingReview.length > 0) {
+      html += sectionHeader('Awaiting your review', awaitingReview.length, 'Approve to release for sending · edit notes if anything needs changing', 'var(--blue)');
+      for (const inv of awaitingReview) html += renderPipeRow(inv);
+    }
+    if (readyToSend.length > 0) {
+      html += sectionHeader('Ready to send', readyToSend.length, 'Approved · queued for the bookkeeping team', 'var(--green)');
+      for (const inv of readyToSend) html += renderPipeRow(inv);
+    }
+    if (pipeline.length === 0) {
+      const errMsg = (RECEIVABLES.meta && RECEIVABLES.meta.error) || 'No upcoming invoices.';
+      html = `<tr><td colspan="${cols.length}" style="padding:40px;text-align:center;color:var(--muted)">${escapeHtml(errMsg)}</td></tr>`;
+    }
+    tbody.innerHTML = html;
   }
 
-  tbody.innerHTML = inv.map(r => {
-    const overdue = parseInt(r.daysOverdue, 10);
-    const overdueDisp = isNaN(overdue) ? '<span style="color:var(--muted)">—</span>'
-      : (overdue > 0 ? '<span style="color:var(--red)">' + overdue + 'd</span>' : '<span style="color:var(--muted)">—</span>');
-    return '<tr>' +
-      '<td style="font-family:\'DM Sans\';font-size:12px;color:var(--muted)">' + escapeHtml(r.invoiceNumber) + '</td>' +
-      '<td>' + escapeHtml(r.client) + '</td>' +
-      '<td style="color:rgba(255,255,255,0.7);font-size:13px">' + escapeHtml(r.candidate) + '</td>' +
-      '<td style="font-size:12px;color:var(--muted)">' + escapeHtml(r.type) + '</td>' +
-      '<td class="num">' + fmt0(r.clientBill) + '</td>' +
-      '<td class="num" style="color:var(--muted);font-size:12px">' + escapeHtml(r.commission) + '</td>' +
-      '<td class="num" style="font-weight:600">' + fmt0(r.invoiceAmount) + '</td>' +
-      '<td class="num">' + overdueDisp + '</td>' +
-      '<td>' + statusPill(r.status) + '</td>' +
-      '</tr>';
-  }).join('');
+  // ── Outstanding table + Donut ────────────────
+  const outTbl = document.getElementById('cfOutstandingTbl');
+  if (outTbl) {
+    const tbody = outTbl.querySelector('tbody');
+    if (outstanding.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="padding:30px;text-align:center;color:var(--muted)">Nothing outstanding 🎉</td></tr>';
+    } else {
+      // Sort by overdue first, then by date oldest first
+      const sorted = outstanding.slice().sort((a, b) => {
+        if (a.sentState === 'overdue' && b.sentState !== 'overdue') return -1;
+        if (b.sentState === 'overdue' && a.sentState !== 'overdue') return 1;
+        const da = parseDDMMYYYY(a.invoiceDate);
+        const db = parseDDMMYYYY(b.invoiceDate);
+        return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
+      });
+      const maxAge = sorted.reduce((m, i) => {
+        const dt = parseDDMMYYYY(i.invoiceDate);
+        const age = dt ? Math.floor((today - dt) / 86400000) : 0;
+        return Math.max(m, age);
+      }, 1);
+      tbody.innerHTML = sorted.map(inv => {
+        const dt = parseDDMMYYYY(inv.invoiceDate);
+        const age = dt ? Math.floor((today - dt) / 86400000) : 0;
+        const dueStr = dt ? `${dt.toLocaleString('en-US', { month: 'short' })} ${dt.getDate()}` : '—';
+        const isOverdue = inv.sentState === 'overdue' || age > 30;
+        const ageColor = age > 60 ? 'var(--red)' : age > 30 ? 'var(--amber)' : 'var(--muted)';
+        const barColor = age > 60 ? 'var(--red)' : age > 30 ? 'var(--amber)' : 'rgba(255,255,255,0.15)';
+        const barWidth = Math.min(100, (age / maxAge) * 100);
+        return '<tr style="border-bottom:1px solid rgba(255,255,255,0.04)">' +
+          `<td style="padding:8px 10px;font-size:12px">${escapeHtml(inv.client)}</td>` +
+          `<td style="padding:8px 10px;font-size:12px;color:rgba(255,255,255,0.7)">${escapeHtml(inv.candidate)}</td>` +
+          `<td class="num" style="padding:8px 10px;font-size:12px;font-weight:600">${fmt0(invoiceAmount(inv))}</td>` +
+          `<td class="num" style="padding:8px 10px;font-size:11px;color:var(--muted)">${escapeHtml(dueStr)}</td>` +
+          `<td style="padding:8px 10px"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:${ageColor};min-width:30px">${age}d</span><div style="flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden"><div style="height:100%;background:${barColor};width:${barWidth}%"></div></div></div></td>` +
+          '</tr>';
+      }).join('');
+    }
+  }
+
+  // Donut chart: Unpaid vs Partially Paid (placeholder: assume all outstanding is fully unpaid)
+  const donutEl = document.getElementById('cfDonut');
+  if (donutEl) {
+    if (cfDonutChart) { cfDonutChart.destroy(); cfDonutChart = null; }
+    const unpaidTotal = outstandingTotal; // all outstanding treated as unpaid for now
+    const partialTotal = 0;
+    const total = unpaidTotal + partialTotal;
+    const partialPct = total > 0 ? (partialTotal / total * 100).toFixed(0) : 0;
+    const unpaidPct = total > 0 ? (100 - partialPct) : 0;
+    cfDonutChart = new Chart(donutEl, {
+      type: 'doughnut',
+      data: {
+        labels: ['Unpaid','Partially Paid'],
+        datasets: [{
+          data: [unpaidTotal, partialTotal],
+          backgroundColor: ['#f59e0b','#fde047'],
+          borderWidth: 0,
+          hoverOffset: 4
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '70%',
+        plugins: { legend: { display: false }, datalabels: { display: false } }
+      }
+    });
+    setText('cfDonutCenter', fmtK(total));
+    const legendEl = document.getElementById('cfDonutLegend');
+    if (legendEl) {
+      legendEl.innerHTML =
+        `<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span><span style="display:inline-block;width:8px;height:8px;background:#f59e0b;border-radius:50%;margin-right:6px"></span>Unpaid <span style="color:var(--muted)">(${outstanding.length})</span></span><span><b>${fmtK(unpaidTotal)}</b> <span style="color:var(--muted);font-size:11px">${unpaidPct}%</span></span></div>` +
+        `<div style="display:flex;justify-content:space-between"><span><span style="display:inline-block;width:8px;height:8px;background:#fde047;border-radius:50%;margin-right:6px"></span>Partially Paid <span style="color:var(--muted)">(0)</span></span><span><b>${fmtK(partialTotal)}</b> <span style="color:var(--muted);font-size:11px">${partialPct}%</span></span></div>`;
+    }
+  }
+}
+
+// ── Approve / Note write-back handlers ─────────
+async function approveInvoice(rowNumber, candidate, client, btnEl) {
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Approving…'; }
+  try {
+    const res = await fetch('/api/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rowNumber, verify: { candidate, client } })
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
+    // Refresh data from the server
+    if (btnEl) btnEl.textContent = '✓ Approved';
+    setTimeout(() => forceReloadData && forceReloadData(), 600);
+  } catch (e) {
+    console.error('Approve failed:', e);
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = '✗ Retry'; btnEl.style.background = '#ef4444'; }
+    alert('Approve failed: ' + e.message);
+  }
+}
+
+let noteSaveTimer = null;
+async function saveNote(rowNumber, candidate, client, note, inputEl) {
+  // Debounce to avoid hammering on every keystroke (only fires on blur anyway)
+  if (inputEl) inputEl.style.borderColor = 'rgba(245,158,11,0.6)';
+  try {
+    const res = await fetch('/api/note', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rowNumber, note, verify: { candidate, client } })
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
+    if (inputEl) {
+      inputEl.style.borderColor = 'rgba(34,197,94,0.6)';
+      setTimeout(() => { inputEl.style.borderColor = 'transparent'; }, 800);
+    }
+  } catch (e) {
+    console.error('Note save failed:', e);
+    if (inputEl) inputEl.style.borderColor = 'var(--red)';
+  }
 }
 
 function rebuildFilterDropdowns() {
