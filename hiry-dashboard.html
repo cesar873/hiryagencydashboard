@@ -232,6 +232,30 @@ tr:last-child td { border-bottom: none; }
 }
 .filterbar .refresh:hover { border-color: var(--blue); color: var(--blue); }
 
+/* Cash Flow ghost button — restrained icon + label, matches AgenCFO chrome */
+.cf-ghost-btn {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--card-border);
+  color: rgba(255,255,255,0.75);
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+  letter-spacing: 0.2px;
+}
+.cf-ghost-btn:hover {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.18);
+  color: var(--text);
+}
+.cf-ghost-btn svg { opacity: 0.85; }
+
 /* ── Insights box ─────────────────── */
 .insights {
   background: linear-gradient(135deg, rgba(19,144,235,0.06), rgba(19,144,235,0.02));
@@ -980,7 +1004,10 @@ tr:last-child td { border-bottom: none; }
           <div style="font-size:11px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase">Pipeline</div>
           <h2 style="font-family:'Anton',sans-serif;font-size:22px;letter-spacing:1px;margin:4px 0 0">UPCOMING INVOICES</h2>
         </div>
-        <button class="refresh" id="cfBreakdownToggle" onclick="toggleCfBreakdown()" style="font-size:11px;padding:6px 12px">👁 Show breakdown</button>
+        <button id="cfBreakdownToggle" onclick="toggleCfBreakdown()" class="cf-ghost-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span id="cfBreakdownLabel">Show breakdown</span>
+        </button>
       </div>
       <div class="tbl-scroll-y" style="max-height:540px">
         <table style="width:100%;border-collapse:collapse" id="cfPipelineTbl">
@@ -1869,8 +1896,21 @@ let cfDonutChart = null;
 
 function toggleCfBreakdown() {
   cfShowBreakdown = !cfShowBreakdown;
+  // Update the label only (preserve the SVG icon)
+  const label = document.getElementById('cfBreakdownLabel');
+  if (label) label.textContent = cfShowBreakdown ? 'Hide breakdown' : 'Show breakdown';
+  // Toggle the eye icon (open vs closed via strikethrough line)
   const btn = document.getElementById('cfBreakdownToggle');
-  if (btn) btn.textContent = cfShowBreakdown ? '👁 Hide breakdown' : '👁 Show breakdown';
+  if (btn) {
+    const svg = btn.querySelector('svg');
+    if (svg) {
+      if (cfShowBreakdown) {
+        svg.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+      } else {
+        svg.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+      }
+    }
+  }
   renderReceivables();
 }
 
