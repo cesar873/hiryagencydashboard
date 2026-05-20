@@ -1023,15 +1023,15 @@ tr:last-child td { border-bottom: none; }
       <div style="font-family:'Anton',sans-serif;font-size:32px;letter-spacing:1.5px;margin-top:4px" id="cfOutstandingHead">—</div>
       <div style="color:var(--muted);font-size:12px;margin-top:4px" id="cfOutstandingHeadSub">— sent, not yet collected</div>
 
-      <div style="display:flex;align-items:center;gap:24px;margin-top:24px">
-        <div style="width:160px;height:160px;position:relative;flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:18px;margin-top:18px">
+        <div style="width:120px;height:120px;position:relative;flex-shrink:0">
           <canvas id="cfDonut"></canvas>
           <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
-            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px">Open</div>
-            <div style="font-family:'Anton',sans-serif;font-size:20px;letter-spacing:0.5px" id="cfDonutCenter">—</div>
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px">Open</div>
+            <div style="font-family:'Anton',sans-serif;font-size:17px;letter-spacing:0.5px" id="cfDonutCenter">—</div>
           </div>
         </div>
-        <div style="flex:1;font-size:13px" id="cfDonutLegend"></div>
+        <div style="flex:1;font-size:12px;min-width:0" id="cfDonutLegend"></div>
       </div>
 
       <div style="margin-top:24px">
@@ -1039,16 +1039,21 @@ tr:last-child td { border-bottom: none; }
           <div style="font-size:11px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase">Sent & Unpaid</div>
           <div style="font-size:10px;color:var(--muted)">click any row for details</div>
         </div>
-        <div style="margin-top:8px">
-          <table style="width:100%;border-collapse:collapse" id="cfOutstandingTbl">
+        <div style="margin-top:8px;overflow:hidden">
+          <table style="width:100%;border-collapse:collapse;table-layout:fixed" id="cfOutstandingTbl">
+            <colgroup>
+              <col style="width:40%">
+              <col style="width:24%">
+              <col style="width:14%">
+              <col style="width:22%">
+            </colgroup>
             <thead><tr style="border-bottom:1px solid var(--card-border)">
-              <th style="text-align:left;padding:8px 10px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Client</th>
-              <th style="text-align:left;padding:8px 10px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Candidate</th>
-              <th class="num" style="padding:8px 10px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Amount</th>
-              <th class="num" style="padding:8px 10px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Due</th>
-              <th style="padding:8px 10px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Age</th>
+              <th style="text-align:left;padding:8px 8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Client / Candidate</th>
+              <th class="num" style="padding:8px 8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Amount</th>
+              <th class="num" style="padding:8px 8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Due</th>
+              <th style="padding:8px 8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Age</th>
             </tr></thead>
-            <tbody><tr><td colspan="5" style="padding:30px;text-align:center;color:var(--muted)">Loading…</td></tr></tbody>
+            <tbody><tr><td colspan="4" style="padding:30px;text-align:center;color:var(--muted)">Loading…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -2099,7 +2104,7 @@ function renderReceivables() {
   if (outTbl) {
     const tbody = outTbl.querySelector('tbody');
     if (outstanding.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="padding:30px;text-align:center;color:var(--muted)">Nothing outstanding 🎉</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" style="padding:30px;text-align:center;color:var(--muted)">Nothing outstanding 🎉</td></tr>';
     } else {
       // Sort by overdue first, then by date oldest first
       const sorted = outstanding.slice().sort((a, b) => {
@@ -2118,16 +2123,20 @@ function renderReceivables() {
         const dt = parseDDMMYYYY(inv.invoiceDate);
         const age = dt ? Math.floor((today - dt) / 86400000) : 0;
         const dueStr = dt ? `${dt.toLocaleString('en-US', { month: 'short' })} ${dt.getDate()}` : '—';
-        const isOverdue = inv.sentState === 'overdue' || age > 30;
         const ageColor = age > 60 ? 'var(--red)' : age > 30 ? 'var(--amber)' : 'var(--muted)';
         const barColor = age > 60 ? 'var(--red)' : age > 30 ? 'var(--amber)' : 'rgba(255,255,255,0.15)';
         const barWidth = Math.min(100, (age / maxAge) * 100);
+        const cellEllipsis = 'overflow:hidden;white-space:nowrap;text-overflow:ellipsis';
+        const clientShort = inv.client || '—';
+        const candidateShort = inv.candidate || '';
         return '<tr style="border-bottom:1px solid rgba(255,255,255,0.04)">' +
-          `<td style="padding:8px 10px;font-size:12px">${escapeHtml(inv.client)}</td>` +
-          `<td style="padding:8px 10px;font-size:12px;color:rgba(255,255,255,0.7)">${escapeHtml(inv.candidate)}</td>` +
-          `<td class="num" style="padding:8px 10px;font-size:12px;font-weight:600">${fmt0(invoiceAmount(inv))}</td>` +
-          `<td class="num" style="padding:8px 10px;font-size:11px;color:var(--muted)">${escapeHtml(dueStr)}</td>` +
-          `<td style="padding:8px 10px"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:${ageColor};min-width:30px">${age}d</span><div style="flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden"><div style="height:100%;background:${barColor};width:${barWidth}%"></div></div></div></td>` +
+          `<td style="padding:8px 8px;${cellEllipsis}" title="${escapeHtml(clientShort + ' — ' + candidateShort)}">` +
+            `<div style="font-size:12px;${cellEllipsis}">${escapeHtml(clientShort)}</div>` +
+            `<div style="font-size:11px;color:rgba(255,255,255,0.55);${cellEllipsis}">${escapeHtml(candidateShort)}</div>` +
+          `</td>` +
+          `<td class="num" style="padding:8px 8px;font-size:12px;font-weight:600">${fmt0(invoiceAmount(inv))}</td>` +
+          `<td class="num" style="padding:8px 8px;font-size:11px;color:var(--muted)">${escapeHtml(dueStr)}</td>` +
+          `<td style="padding:8px 8px"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:${ageColor};min-width:26px;flex-shrink:0">${age}d</span><div style="flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden;min-width:20px"><div style="height:100%;background:${barColor};width:${barWidth}%"></div></div></div></td>` +
           '</tr>';
       }).join('');
     }
