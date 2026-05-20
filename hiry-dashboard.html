@@ -1900,18 +1900,20 @@ function renderReceivables() {
   const sub = document.getElementById('cfSub');
   if (sub) sub.textContent = periodLabel + ' · live from the Receivables tab';
 
-  // Each invoice's "amount" for KPI purposes = commission amount (what Hiry collects)
-  // Use the matching month column if present, else commission% × billed
+  // Each invoice's "amount" = the COMMISSION Hiry actually invoices (the cash inflow).
+  // `Billed` in the sheet is the underlying transaction value (placement fee owed by
+  // the client OR the candidate's salary depending on the arrangement). `Billed` × commission%
+  // = what Hiry sends an invoice for, regardless of whether the invoice goes to the client
+  // or the candidate. The monthly columns already store the commission $ — prefer those.
   function invoiceAmount(inv) {
-    // months object has { 'May 2026': 100.00 }
     if (inv.months && Object.keys(inv.months).length > 0) {
-      // sum across all month entries (typical case: one month per invoice)
       return Object.values(inv.months).reduce((s, v) => s + v, 0);
     }
     if (inv.commissionPct && inv.billed) return inv.commissionPct * inv.billed / 100;
     return 0;
   }
-  function invoiceClientBill(inv) { return inv.billed || 0; }
+  // Underlying billed amount — kept for reference in the breakdown view but NOT used in KPIs
+  function underlyingBilled(inv) { return inv.billed || 0; }
 
   // Categorize
   const pipeline = data.filter(i => i.sentState === 'pipeline');
@@ -1926,7 +1928,7 @@ function renderReceivables() {
   const outstandingTotal = outstanding.reduce((s, i) => s + invoiceAmount(i), 0);
   const overdueInvs = data.filter(i => i.sentState === 'overdue');
   const overdueTotal = overdueInvs.reduce((s, i) => s + invoiceAmount(i), 0);
-  const pipelineTotal = pipeline.reduce((s, i) => s + invoiceClientBill(i), 0);
+  const pipelineTotal = pipeline.reduce((s, i) => s + invoiceAmount(i), 0);
 
   // Worst overdue age (days since invoice date)
   let worstOverdue = 0;
