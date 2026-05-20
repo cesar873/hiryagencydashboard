@@ -995,8 +995,8 @@ tr:last-child td { border-bottom: none; }
     </div>
   </div>
 
-  <!-- Two panels: Pipeline (left) + Outstanding (right) -->
-  <div class="grid-12 gap" style="grid-template-columns:1.4fr 1fr;gap:16px;display:grid;align-items:start">
+  <!-- Two panels: Pipeline (left) + Outstanding (right) — equal widths to match reference -->
+  <div class="grid-12 gap" style="grid-template-columns:1fr 1fr;gap:16px;display:grid;align-items:start">
     <!-- PIPELINE -->
     <div class="panel" style="padding:20px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
@@ -2017,9 +2017,11 @@ function renderReceivables() {
     const thead = pipeTbl.querySelector('thead');
     const tbody = pipeTbl.querySelector('tbody');
 
+    // Default view hides notes — click "Show breakdown" to reveal them along with
+    // service / currency / billed / commission %. Keeps the default panel narrow.
     const cols = cfShowBreakdown
       ? ['Date','Client','Candidate','Service','Currency','Billed','Commission','Notes']
-      : ['Date','Client','Candidate','Notes','Amount','Status','Actions'];
+      : ['Date','Client','Candidate','Amount','Status','Actions'];
 
     thead.innerHTML = '<tr style="border-bottom:1px solid var(--card-border)">' +
       cols.map((c, idx) => {
@@ -2035,6 +2037,9 @@ function renderReceivables() {
       const amount = invoiceAmount(inv);
 
       if (cfShowBreakdown) {
+        const candidateAttr = JSON.stringify(inv.candidate).replace(/"/g, '&quot;');
+        const clientAttr = JSON.stringify(inv.client).replace(/"/g, '&quot;');
+        const noteInput = `<input type="text" value="${escapeHtml(inv.notes || '')}" onblur="saveNote(${inv.rowNumber}, ${candidateAttr}, ${clientAttr}, this.value, this)" placeholder="Add note…" style="background:transparent;border:1px solid transparent;color:rgba(255,255,255,0.85);font-size:12px;padding:4px 6px;border-radius:4px;width:100%;min-width:160px;font-family:'DM Sans',sans-serif" onfocus="this.style.borderColor='rgba(255,255,255,0.2)'"/>`;
         return '<tr style="border-bottom:1px solid rgba(255,255,255,0.04)">' +
           `<td style="padding:10px 12px;font-size:11px;color:var(--muted);letter-spacing:0.6px;text-transform:uppercase">${escapeHtml(dateStr)}</td>` +
           `<td style="padding:10px 12px;font-size:13px">${escapeHtml(inv.client)}</td>` +
@@ -2043,7 +2048,7 @@ function renderReceivables() {
           `<td style="padding:10px 12px;font-size:13px;color:var(--muted)">${escapeHtml(inv.currency)}</td>` +
           `<td class="num" style="padding:10px 12px;font-size:13px">${fmt0(inv.billed)}</td>` +
           `<td class="num" style="padding:10px 12px;font-size:13px;color:var(--muted)">${escapeHtml(inv.commission)}</td>` +
-          `<td style="padding:10px 12px;font-size:12px;color:var(--muted);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(inv.notes)}">${escapeHtml(inv.notes || '—')}</td>` +
+          `<td style="padding:10px 12px">${noteInput}</td>` +
           '</tr>';
       }
 
@@ -2055,13 +2060,10 @@ function renderReceivables() {
         ? '<button class="approve-btn" disabled style="background:rgba(34,197,94,0.18);color:#22c55e;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:default">✓ Approved</button>'
         : `<button class="approve-btn" onclick="approveInvoice(${inv.rowNumber}, ${JSON.stringify(inv.candidate).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.client).replace(/"/g, '&quot;')}, this)" style="background:#1390eb;color:white;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">✓ Approve</button>`;
 
-      const noteEditable = `<input type="text" value="${escapeHtml(inv.notes || '')}" onblur="saveNote(${inv.rowNumber}, ${JSON.stringify(inv.candidate).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.client).replace(/"/g, '&quot;')}, this.value, this)" placeholder="Add note…" style="background:transparent;border:1px solid transparent;color:rgba(255,255,255,0.85);font-size:12px;padding:4px 6px;border-radius:4px;width:100%;font-family:'DM Sans',sans-serif" onfocus="this.style.borderColor='rgba(255,255,255,0.2)'" onblur_styling="this.style.borderColor='transparent'"/>`;
-
       return '<tr style="border-bottom:1px solid rgba(255,255,255,0.04)">' +
         `<td style="padding:10px 12px;font-size:11px;color:var(--muted);letter-spacing:0.6px;text-transform:uppercase">${escapeHtml(dateStr)}</td>` +
         `<td style="padding:10px 12px;font-size:13px">${escapeHtml(inv.client)}</td>` +
         `<td style="padding:10px 12px;font-size:13px;color:rgba(255,255,255,0.7)">${escapeHtml(inv.candidate)}</td>` +
-        `<td style="padding:10px 12px;font-size:12px;min-width:140px">${noteEditable}</td>` +
         `<td class="num" style="padding:10px 12px;font-size:13px;font-weight:600">${fmt0(amount)}</td>` +
         `<td style="padding:10px 12px">${statusPill}</td>` +
         `<td style="padding:10px 12px">${actions}</td>` +
