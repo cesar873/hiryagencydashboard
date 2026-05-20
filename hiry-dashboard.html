@@ -1935,10 +1935,13 @@ function renderReceivables() {
   };
   const today = new Date();
 
-  // Sub-text
-  const periodLabel = MONTHS[filterState.period] || '—';
+  // The Cash Flow tab tracks REAL-TIME receivables, not historical P&L periods.
+  // It should always reference TODAY'S current month, not the global Period filter
+  // (which is locked to the most recent ACTUAL P&L month for the rest of the dashboard).
+  const MONTH_SHORT_LBL = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const currentMonthLabel = MONTH_SHORT_LBL[today.getMonth()] + ' ' + String(today.getFullYear()).slice(2);
   const sub = document.getElementById('cfSub');
-  if (sub) sub.textContent = periodLabel + ' · live from the Receivables tab';
+  if (sub) sub.textContent = currentMonthLabel + ' · live from the Receivables tab';
 
   // Each invoice's "amount" = the COMMISSION Hiry actually invoices (the cash inflow).
   // `Billed` in the sheet is the underlying transaction value (placement fee owed by
@@ -1997,7 +2000,7 @@ function renderReceivables() {
   setText('cfDue7Sub', '— nothing imminent');
   setText('cfPipeline', fmtK(pipelineTotal));
   setText('cfPipelineSub', '— ' + pipeline.length + ' drafts + ready');
-  setText('cfCollectedLabel', 'Collected · ' + periodLabel);
+  setText('cfCollectedLabel', 'Collected · ' + currentMonthLabel);
   setText('cfCollected', fmtK(collectedTotal));
   setText('cfCollectedSub', paid.length > 0 ? '— ' + paid.length + ' paid' : '— 0 paid');
 
