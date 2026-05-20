@@ -996,7 +996,7 @@ tr:last-child td { border-bottom: none; }
   </div>
 
   <!-- Two panels: Pipeline (left) + Outstanding (right) -->
-  <div class="grid-12 gap" style="grid-template-columns:1.4fr 1fr;gap:16px;display:grid">
+  <div class="grid-12 gap" style="grid-template-columns:1.4fr 1fr;gap:16px;display:grid;align-items:start">
     <!-- PIPELINE -->
     <div class="panel" style="padding:20px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
@@ -1009,7 +1009,7 @@ tr:last-child td { border-bottom: none; }
           <span id="cfBreakdownLabel">Show breakdown</span>
         </button>
       </div>
-      <div class="tbl-scroll-y" style="max-height:540px">
+      <div>
         <table style="width:100%;border-collapse:collapse" id="cfPipelineTbl">
           <thead></thead>
           <tbody><tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted)">Loading…</td></tr></tbody>
@@ -1039,7 +1039,7 @@ tr:last-child td { border-bottom: none; }
           <div style="font-size:11px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase">Sent & Unpaid</div>
           <div style="font-size:10px;color:var(--muted)">click any row for details</div>
         </div>
-        <div class="tbl-scroll-y" style="max-height:280px;margin-top:8px">
+        <div style="margin-top:8px">
           <table style="width:100%;border-collapse:collapse" id="cfOutstandingTbl">
             <thead><tr style="border-bottom:1px solid var(--card-border)">
               <th style="text-align:left;padding:8px 10px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Client</th>
