@@ -238,13 +238,27 @@ async function fetchReceivablesData(sheets, tabs) {
     if (approvedRaw === 'true' || approvedRaw === 'yes' || approvedRaw === '1' || approvedRaw === 'approved') approved = true;
 
     const sentRaw = String(row[cols.sent] || '').trim();
-    let sentState = 'pipeline';        // empty
+    let sentState = 'pipeline'; // empty cell → still in pipeline
     if (sentRaw) {
       const sLower = sentRaw.toLowerCase();
-      if (sLower === 'paid') sentState = 'paid';
-      else if (sLower === 'overdue') sentState = 'overdue';
-      else if (sLower === 'sent' || /^\d/.test(sentRaw) || sLower.includes('sent')) sentState = 'sent';
-      else sentState = sLower;
+      // Paid / collected
+      if (sLower === 'paid' || sLower === 'fully paid' || sLower === 'collected') {
+        sentState = 'paid';
+      }
+      // Overdue / late
+      else if (sLower === 'overdue' || sLower === 'late' || sLower === 'past due') {
+        sentState = 'overdue';
+      }
+      // Sent / Open / Unpaid / Partially Paid — all = outstanding (sent, not yet paid)
+      else if (sLower === 'sent' || sLower === 'open' || sLower === 'unpaid' ||
+               sLower === 'partially paid' || sLower === 'awaiting payment' ||
+               sLower.includes('sent') || /^\d/.test(sentRaw)) {
+        sentState = 'sent';
+      }
+      // Unknown value — keep raw so it shows in _meta debug
+      else {
+        sentState = sLower;
+      }
     }
 
     const billed = num(billedRaw);
