@@ -13,6 +13,8 @@ import {
   getSheetsClient,
   findReceivablesTab,
   findReceivablesHeader,
+  findClientsReceivablesTab,
+  findClientsReceivablesHeader,
   colNumToLetter
 } from '../lib/sheets.js';
 
@@ -35,16 +37,18 @@ export default async function handler(req, res) {
   if (!rowNumber || rowNumber < 2) {
     return res.status(400).json({ error: 'rowNumber required and must be >= 2' });
   }
+  const source = (body.source === 'client') ? 'client' : 'candidate'; // default = candidate
   const verify = body.verify || {};
 
   try {
     const sheets = await getSheetsClient();
 
-    // Locate the receivables tab
-    const tab = await findReceivablesTab(sheets);
-    if (!tab) return res.status(500).json({ error: 'Receivables tab not found in spreadsheet' });
+    // Locate the right receivables tab + header parser based on source
+    const tab = source === 'client'
+      ? await findClientsReceivablesTab(sheets)
+      : await findReceivablesTab(sheets);
+    if (!tab) return res.status(500).json({ error: `${source} receivables tab not found in spreadsheet` });
 
-    // Read the header + target row in one call
     const range = `'${tab}'!A1:AZ${rowNumber}`;
     const readRes = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
@@ -52,12 +56,14 @@ export default async function handler(req, res) {
       valueRenderOption: 'FORMATTED_VALUE'
     });
     const rows = readRes.data.values || [];
-    const found = findReceivablesHeader(rows);
-    if (!found) return res.status(500).json({ error: 'Could not parse Receivables header row' });
+    const found = source === 'client'
+      ? findClientsReceivablesHeader(rows)
+      : findReceivablesHeader(rows);
+    if (!found) return res.status(500).json({ error: `Could not parse ${source} receivables header row` });
 
     const { cols } = found;
     if (cols.approved < 0) {
-      return res.status(500).json({ error: 'No "Approved" column found in Receivables tab' });
+      return res.status(500).json({ error: `No "Approved" column found in ${source} receivables tab` });
     }
 
     // Verify the row contents match what the client saw

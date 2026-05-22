@@ -1954,6 +1954,9 @@ function renderReceivables() {
   // = what Hiry sends an invoice for, regardless of whether the invoice goes to the client
   // or the candidate. The monthly columns already store the commission $ — prefer those.
   function invoiceAmount(inv) {
+    // Client tab provides `amount` directly (the Invoice Amount column).
+    // Candidate tab populates `amount` server-side from month cols or billed×commission%.
+    if (typeof inv.amount === 'number' && inv.amount !== 0) return inv.amount;
     if (inv.months && Object.keys(inv.months).length > 0) {
       return Object.values(inv.months).reduce((s, v) => s + v, 0);
     }
@@ -1988,9 +1991,19 @@ function renderReceivables() {
     }
   }
 
-  // Due next 7 days — heuristic: invoices in current pipeline scheduled for current month
-  // Since we don't have explicit due dates yet, show 0 with a "—" sub
-  const due7 = 0;
+  // Due next 7 days — for invoices with an explicit dueDate (client tab provides it)
+  // that are still outstanding (sent but not paid) and due within 7 days from today.
+  const in7Days = new Date(today.getTime() + 7 * 86400000);
+  let due7 = 0, due7Count = 0;
+  for (const inv of outstanding) {
+    if (!inv.dueDate) continue;
+    const dueDt = parseDDMMYYYY(inv.dueDate);
+    if (!dueDt) continue;
+    if (dueDt >= today && dueDt <= in7Days) {
+      due7 += invoiceAmount(inv);
+      due7Count++;
+    }
+  }
 
   // Collected this period (paid invoices with paid date in selected month)
   // For now: count all paid invoices' commission as collected (sheet doesn't yet track paid date)
@@ -2002,7 +2015,7 @@ function renderReceivables() {
   setText('cfOverdue', fmtK(overdueTotal));
   setText('cfOverdueSub', overdueInvs.length > 0 ? `— ${overdueInvs.length} late · worst ${worstOverdue}d` : '— none overdue');
   setText('cfDue7', due7 ? fmtK(due7) : '$0');
-  setText('cfDue7Sub', '— nothing imminent');
+  setText('cfDue7Sub', due7Count > 0 ? '— ' + due7Count + ' invoice' + (due7Count === 1 ? '' : 's') + ' · next 7 days' : '— nothing imminent');
   setText('cfPipeline', fmtK(pipelineTotal));
   setText('cfPipelineSub', '— ' + pipeline.length + ' drafts + ready');
   setText('cfCollectedLabel', 'Collected · ' + currentMonthLabel);
@@ -2041,15 +2054,22 @@ function renderReceivables() {
         : (inv.invoiceDate || '—');
       const amount = invoiceAmount(inv);
 
+      // Tiny CLIENT / CAND badge — same chrome as elsewhere on the dashboard
+      const sourceBadge = inv.source === 'client'
+        ? '<span style="display:inline-block;font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(19,144,235,0.15);color:#1390eb;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-right:6px;vertical-align:middle">Client</span>'
+        : '<span style="display:inline-block;font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(192,132,252,0.15);color:#c084fc;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-right:6px;vertical-align:middle">Cand</span>';
+
+      const sourceAttr = JSON.stringify(inv.source || 'candidate').replace(/"/g, '&quot;');
+      const candidateAttr = JSON.stringify(inv.candidate).replace(/"/g, '&quot;');
+      const clientAttr = JSON.stringify(inv.client).replace(/"/g, '&quot;');
+
       if (cfShowBreakdown) {
-        const candidateAttr = JSON.stringify(inv.candidate).replace(/"/g, '&quot;');
-        const clientAttr = JSON.stringify(inv.client).replace(/"/g, '&quot;');
-        const noteInput = `<input type="text" value="${escapeHtml(inv.notes || '')}" onblur="saveNote(${inv.rowNumber}, ${candidateAttr}, ${clientAttr}, this.value, this)" placeholder="Add note…" style="background:transparent;border:1px solid transparent;color:rgba(255,255,255,0.85);font-size:12px;padding:4px 6px;border-radius:4px;width:100%;min-width:160px;font-family:'DM Sans',sans-serif" onfocus="this.style.borderColor='rgba(255,255,255,0.2)'"/>`;
+        const noteInput = `<input type="text" value="${escapeHtml(inv.notes || '')}" onblur="saveNote(${inv.rowNumber}, ${sourceAttr}, ${candidateAttr}, ${clientAttr}, this.value, this)" placeholder="Add note…" style="background:transparent;border:1px solid transparent;color:rgba(255,255,255,0.85);font-size:12px;padding:4px 6px;border-radius:4px;width:100%;min-width:160px;font-family:'DM Sans',sans-serif" onfocus="this.style.borderColor='rgba(255,255,255,0.2)'"/>`;
         return '<tr style="border-bottom:1px solid rgba(255,255,255,0.04)">' +
           `<td style="padding:10px 12px;font-size:11px;color:var(--muted);letter-spacing:0.6px;text-transform:uppercase">${escapeHtml(dateStr)}</td>` +
-          `<td style="padding:10px 12px;font-size:13px">${escapeHtml(inv.client)}</td>` +
+          `<td style="padding:10px 12px;font-size:13px">${sourceBadge}${escapeHtml(inv.client)}</td>` +
           `<td style="padding:10px 12px;font-size:13px;color:rgba(255,255,255,0.7)">${escapeHtml(inv.candidate)}</td>` +
-          `<td style="padding:10px 12px;font-size:13px;color:var(--muted)">Placement</td>` +
+          `<td style="padding:10px 12px;font-size:13px;color:var(--muted)">${escapeHtml(inv.jobTitle || 'Placement')}</td>` +
           `<td style="padding:10px 12px;font-size:13px;color:var(--muted)">${escapeHtml(inv.currency)}</td>` +
           `<td class="num" style="padding:10px 12px;font-size:13px">${fmt0(inv.billed)}</td>` +
           `<td class="num" style="padding:10px 12px;font-size:13px;color:var(--muted)">${escapeHtml(inv.commission)}</td>` +
@@ -2063,11 +2083,11 @@ function renderReceivables() {
 
       const actions = inv.approved
         ? '<button class="approve-btn" disabled style="background:rgba(34,197,94,0.18);color:#22c55e;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:default">✓ Approved</button>'
-        : `<button class="approve-btn" onclick="approveInvoice(${inv.rowNumber}, ${JSON.stringify(inv.candidate).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.client).replace(/"/g, '&quot;')}, this)" style="background:#1390eb;color:white;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">✓ Approve</button>`;
+        : `<button class="approve-btn" onclick="approveInvoice(${inv.rowNumber}, ${sourceAttr}, ${candidateAttr}, ${clientAttr}, this)" style="background:#1390eb;color:white;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">✓ Approve</button>`;
 
       return '<tr style="border-bottom:1px solid rgba(255,255,255,0.04)">' +
         `<td style="padding:10px 12px;font-size:11px;color:var(--muted);letter-spacing:0.6px;text-transform:uppercase">${escapeHtml(dateStr)}</td>` +
-        `<td style="padding:10px 12px;font-size:13px">${escapeHtml(inv.client)}</td>` +
+        `<td style="padding:10px 12px;font-size:13px">${sourceBadge}${escapeHtml(inv.client)}</td>` +
         `<td style="padding:10px 12px;font-size:13px;color:rgba(255,255,255,0.7)">${escapeHtml(inv.candidate)}</td>` +
         `<td class="num" style="padding:10px 12px;font-size:13px;font-weight:600">${fmt0(amount)}</td>` +
         `<td style="padding:10px 12px">${statusPill}</td>` +
@@ -2129,13 +2149,20 @@ function renderReceivables() {
         const cellEllipsis = 'overflow:hidden;white-space:nowrap;text-overflow:ellipsis';
         const clientShort = inv.client || '—';
         const candidateShort = inv.candidate || '';
+        const sourceBadge = inv.source === 'client'
+          ? '<span style="display:inline-block;font-size:8px;padding:1px 5px;border-radius:3px;background:rgba(19,144,235,0.15);color:#1390eb;text-transform:uppercase;letter-spacing:0.4px;font-weight:700;margin-right:5px;vertical-align:middle">C</span>'
+          : '<span style="display:inline-block;font-size:8px;padding:1px 5px;border-radius:3px;background:rgba(192,132,252,0.15);color:#c084fc;text-transform:uppercase;letter-spacing:0.4px;font-weight:700;margin-right:5px;vertical-align:middle">P</span>';
+        // For client rows, prefer dueDate over invoiceDate for the "Due" column
+        const dueDtClient = inv.dueDate ? parseDDMMYYYY(inv.dueDate) : null;
+        const dueDispDt = dueDtClient || dt;
+        const dueDispStr = dueDispDt ? `${dueDispDt.toLocaleString('en-US', { month: 'short' })} ${dueDispDt.getDate()}` : '—';
         return '<tr style="border-bottom:1px solid rgba(255,255,255,0.04)">' +
           `<td style="padding:8px 8px;${cellEllipsis}" title="${escapeHtml(clientShort + ' — ' + candidateShort)}">` +
-            `<div style="font-size:12px;${cellEllipsis}">${escapeHtml(clientShort)}</div>` +
+            `<div style="font-size:12px;${cellEllipsis}">${sourceBadge}${escapeHtml(clientShort)}</div>` +
             `<div style="font-size:11px;color:rgba(255,255,255,0.55);${cellEllipsis}">${escapeHtml(candidateShort)}</div>` +
           `</td>` +
           `<td class="num" style="padding:8px 8px;font-size:12px;font-weight:600">${fmt0(invoiceAmount(inv))}</td>` +
-          `<td class="num" style="padding:8px 8px;font-size:11px;color:var(--muted)">${escapeHtml(dueStr)}</td>` +
+          `<td class="num" style="padding:8px 8px;font-size:11px;color:var(--muted)">${escapeHtml(dueDispStr)}</td>` +
           `<td style="padding:8px 8px"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:${ageColor};min-width:26px;flex-shrink:0">${age}d</span><div style="flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden;min-width:20px"><div style="height:100%;background:${barColor};width:${barWidth}%"></div></div></div></td>` +
           '</tr>';
       }).join('');
@@ -2178,13 +2205,13 @@ function renderReceivables() {
 }
 
 // ── Approve / Note write-back handlers ─────────
-async function approveInvoice(rowNumber, candidate, client, btnEl) {
+async function approveInvoice(rowNumber, source, candidate, client, btnEl) {
   if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Approving…'; }
   try {
     const res = await fetch('/api/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rowNumber, verify: { candidate, client } })
+      body: JSON.stringify({ rowNumber, source, verify: { candidate, client } })
     });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
@@ -2199,14 +2226,13 @@ async function approveInvoice(rowNumber, candidate, client, btnEl) {
 }
 
 let noteSaveTimer = null;
-async function saveNote(rowNumber, candidate, client, note, inputEl) {
-  // Debounce to avoid hammering on every keystroke (only fires on blur anyway)
+async function saveNote(rowNumber, source, candidate, client, note, inputEl) {
   if (inputEl) inputEl.style.borderColor = 'rgba(245,158,11,0.6)';
   try {
     const res = await fetch('/api/note', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rowNumber, note, verify: { candidate, client } })
+      body: JSON.stringify({ rowNumber, source, note, verify: { candidate, client } })
     });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));

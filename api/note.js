@@ -10,6 +10,8 @@ import {
   getSheetsClient,
   findReceivablesTab,
   findReceivablesHeader,
+  findClientsReceivablesTab,
+  findClientsReceivablesHeader,
   colNumToLetter
 } from '../lib/sheets.js';
 
@@ -35,12 +37,15 @@ export default async function handler(req, res) {
   if (note.length > 1000) {
     return res.status(400).json({ error: 'note exceeds 1000 chars' });
   }
+  const source = (body.source === 'client') ? 'client' : 'candidate';
   const verify = body.verify || {};
 
   try {
     const sheets = await getSheetsClient();
-    const tab = await findReceivablesTab(sheets);
-    if (!tab) return res.status(500).json({ error: 'Receivables tab not found' });
+    const tab = source === 'client'
+      ? await findClientsReceivablesTab(sheets)
+      : await findReceivablesTab(sheets);
+    if (!tab) return res.status(500).json({ error: `${source} receivables tab not found` });
 
     const range = `'${tab}'!A1:AZ${rowNumber}`;
     const readRes = await sheets.spreadsheets.values.get({
@@ -49,8 +54,10 @@ export default async function handler(req, res) {
       valueRenderOption: 'FORMATTED_VALUE'
     });
     const rows = readRes.data.values || [];
-    const found = findReceivablesHeader(rows);
-    if (!found) return res.status(500).json({ error: 'Could not parse Receivables header row' });
+    const found = source === 'client'
+      ? findClientsReceivablesHeader(rows)
+      : findReceivablesHeader(rows);
+    if (!found) return res.status(500).json({ error: `Could not parse ${source} receivables header row` });
     const { cols } = found;
     if (cols.notes < 0) return res.status(500).json({ error: 'No "notes" column found' });
 

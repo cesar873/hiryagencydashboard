@@ -8,7 +8,12 @@
 // per warm Lambda instance.
 
 import { google } from 'googleapis';
-import { SHEET_ID, getSheetsClient, findReceivablesTab, findReceivablesHeader } from '../lib/sheets.js';
+import {
+  SHEET_ID,
+  getSheetsClient,
+  findReceivablesTab, findReceivablesHeader,
+  findClientsReceivablesTab, findClientsReceivablesHeader
+} from '../lib/sheets.js';
 const CACHE_TTL_SECONDS = 300; // 5 minutes
 const TRAILING_MONTHS = 13;    // dashboard shows last 13 months
 
@@ -274,19 +279,26 @@ async function fetchReceivablesData(sheets, tabs) {
     }
 
     invoices.push({
-      rowNumber: i + 1, // 1-indexed for Sheets API
+      source: 'candidate',
+      rowNumber: i + 1,
       invoiceDate: invoiceDateRaw,
+      dueDate: null, // candidates tab doesn't have a due date column yet
       invoiceNum: String(row[cols.invoiceNum] || '').trim(),
       candidate,
       client,
+      jobTitle: '',
       notes: String(row[cols.notes] || '').trim(),
       currency: String(row[cols.currency] || '').trim() || 'USD',
       billed,
-      commission, // "10%"
+      commission,
       commissionPct,
+      // For candidates the amount Hiry collects = monthly cols sum, or billed × commission%
+      amount: Object.values(monthsData).reduce((s, v) => s + v, 0) ||
+              (commissionPct && billed ? commissionPct * billed / 100 : 0),
       approved,
       sentRaw,
       sentState, // pipeline | sent | paid | overdue
+      datePaid: null,
       months: monthsData
     });
   }
@@ -294,7 +306,110 @@ async function fetchReceivablesData(sheets, tabs) {
   return {
     tab,
     invoices,
-    cols, // include for the write endpoints to use
+    cols,
+    headerRowIdx,
+    meta: {
+      total: invoices.length,
+      pipeline: invoices.filter(x => x.sentState === 'pipeline').length,
+      sent: invoices.filter(x => x.sentState === 'sent').length,
+      paid: invoices.filter(x => x.sentState === 'paid').length,
+      overdue: invoices.filter(x => x.sentState === 'overdue').length
+    }
+  };
+}
+
+// ── Clients Receivables tab reader ─────────────────────────────
+async function fetchClientReceivablesData(sheets, tabs) {
+  const tab = await findClientsReceivablesTab(sheets);
+  if (!tab) return { tab: null, invoices: [], meta: { error: 'No Clients Receivables tab found' } };
+
+  let res;
+  try {
+    res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: `'${tab}'!A1:Z500`,
+      valueRenderOption: 'FORMATTED_VALUE'
+    });
+  } catch (e) {
+    return { tab, invoices: [], meta: { error: 'Clients receivables read failed: ' + e.message } };
+  }
+  const rows = res.data.values || [];
+  const found = findClientsReceivablesHeader(rows);
+  if (!found) {
+    return { tab, invoices: [], meta: { error: 'Clients receivables header not detected (need Client Name + Candidate Name + Approved column)' } };
+  }
+  const { headerRowIdx, cols } = found;
+
+  function parseBool(v) {
+    if (!v) return false;
+    const s = String(v).trim().toLowerCase();
+    return s === 'true' || s === 'yes' || s === '1' || s === 'checked' || s === 'x' || s === '✓';
+  }
+
+  const invoices = [];
+  for (let i = headerRowIdx + 1; i < rows.length; i++) {
+    const row = rows[i] || [];
+    const client = String(row[cols.clientName] || '').trim();
+    const candidate = String(row[cols.candidateName] || '').trim();
+    const invDate = String(row[cols.date] || '').trim();
+    if (!client && !candidate && !invDate) continue; // skip empty rows
+
+    const approved = parseBool(row[cols.approved]);
+    const sent = parseBool(row[cols.sent]);
+    const statusRaw = String(row[cols.status] || '').trim();
+    const sLower = statusRaw.toLowerCase();
+    const datePaid = String(row[cols.datePaid] || '').trim();
+
+    // Derive sentState — unified vocabulary
+    let sentState;
+    if (sLower === 'paid' || sLower === 'fully paid' || sLower === 'collected' || datePaid) {
+      sentState = 'paid';
+    } else if (sLower === 'overdue' || sLower === 'late' || sLower === 'past due') {
+      sentState = 'overdue';
+    } else if (!approved || !sent) {
+      // Not yet approved OR not yet sent → still in pipeline
+      sentState = 'pipeline';
+    } else {
+      // Approved + Sent + not paid yet (status = Open/empty/Unpaid/Partially Paid)
+      sentState = 'sent';
+    }
+
+    const invoiceAmount = num(row[cols.invoiceAmount]);
+    const monthlySalary = num(row[cols.monthlySalary]);
+    const commission = String(row[cols.commission] || '').trim();
+    const commissionPct = num(commission);
+    const deposit = num(row[cols.deposit]);
+
+    invoices.push({
+      source: 'client',
+      rowNumber: i + 1,
+      invoiceDate: invDate,
+      dueDate: String(row[cols.dueDate] || '').trim(),
+      invoiceNum: String(row[cols.invoiceNum] || '').trim(),
+      candidate,
+      client,
+      jobTitle: String(row[cols.jobTitle] || '').trim(),
+      notes: String(row[cols.notes] || '').trim(),
+      currency: String(row[cols.currency] || '').trim() || 'USD',
+      billed: monthlySalary, // underlying value = monthly salary for client tab
+      commission,
+      commissionPct,
+      deposit,
+      amount: invoiceAmount, // explicit — what Hiry actually invoices/collects
+      approved,
+      sent,
+      sentRaw: statusRaw,
+      sentState,
+      datePaid,
+      billingAddress: String(row[cols.billingAddress] || '').trim(),
+      months: {}
+    });
+  }
+
+  return {
+    tab,
+    invoices,
+    cols,
     headerRowIdx,
     meta: {
       total: invoices.length,
@@ -647,7 +762,29 @@ async function fetchSheetData() {
 
   // ── Receivables / Cash Flow tab read ────────────────────────
   // ── Receivables tab read ─────────────────────────────────────
-  const receivables = await fetchReceivablesData(sheets, tabs);
+  const receivablesCandidates = await fetchReceivablesData(sheets, tabs);
+  const receivablesClients = await fetchClientReceivablesData(sheets, tabs);
+  // Merge both sources into a single invoices array, then keep per-source meta for debugging.
+  const mergedInvoices = [
+    ...(receivablesCandidates.invoices || []),
+    ...(receivablesClients.invoices || [])
+  ];
+  const receivables = {
+    invoices: mergedInvoices,
+    tabs: {
+      candidates: receivablesCandidates.tab,
+      clients: receivablesClients.tab
+    },
+    meta: {
+      candidate: receivablesCandidates.meta,
+      client: receivablesClients.meta,
+      total: mergedInvoices.length,
+      pipeline: mergedInvoices.filter(x => x.sentState === 'pipeline').length,
+      sent: mergedInvoices.filter(x => x.sentState === 'sent').length,
+      paid: mergedInvoices.filter(x => x.sentState === 'paid').length,
+      overdue: mergedInvoices.filter(x => x.sentState === 'overdue').length
+    }
+  };
 
   return {
     months,
