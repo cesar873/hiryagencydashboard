@@ -1,11 +1,13 @@
-// POST /api/approve
-// Sets the Approved cell to TRUE for a specific Invoicing row.
+// POST /api/status
+// Updates the Status cell for a specific Invoicing row.
 //
 // Body:
-//   { rowNumber: 17, verify: { candidate, client } }
+//   { rowNumber: 17, status: "Ready",
+//     verify: { candidate, client } }
 //
-// Re-reads the target row and compares verify keys before writing — protects
-// against writes to the wrong row if the sheet was edited between read + write.
+// Allowed statuses (case-insensitive): In Progress, AgenCFO Review,
+// Client Review, Ready, Unpaid, Partially Paid, Fully Paid. Anything else
+// is written through as-is so the sheet stays the source of truth.
 
 import {
   SHEET_ID,
@@ -14,6 +16,11 @@ import {
   findInvoicingHeader,
   colNumToLetter
 } from '../lib/sheets.js';
+
+const ALLOWED = [
+  'In Progress', 'AgenCFO Review', 'Client Review', 'Ready',
+  'Unpaid', 'Partially Paid', 'Fully Paid', 'Paid', 'Open', 'Sent', 'Overdue'
+];
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -33,66 +40,59 @@ export default async function handler(req, res) {
   if (!rowNumber || rowNumber < 2) {
     return res.status(400).json({ error: 'rowNumber required and must be >= 2' });
   }
+  const statusRaw = body.status != null ? String(body.status).trim() : '';
+  if (!statusRaw) return res.status(400).json({ error: 'status required' });
+  if (statusRaw.length > 100) return res.status(400).json({ error: 'status too long' });
+
+  // Canonicalise to the allowed casing if it matches; else pass through.
+  const canonical = ALLOWED.find(s => s.toLowerCase() === statusRaw.toLowerCase()) || statusRaw;
+
   const verify = body.verify || {};
 
   try {
     const sheets = await getSheetsClient();
-
     const tab = await findInvoicingTab(sheets);
-    if (!tab) return res.status(500).json({ error: 'Invoicing tab not found in spreadsheet' });
+    if (!tab) return res.status(500).json({ error: 'Invoicing tab not found' });
 
-    const range = `'${tab}'!A1:AZ${rowNumber}`;
     const readRes = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
-      range,
+      range: `'${tab}'!A1:AZ${rowNumber}`,
       valueRenderOption: 'FORMATTED_VALUE'
     });
     const rows = readRes.data.values || [];
     const found = findInvoicingHeader(rows);
     if (!found) return res.status(500).json({ error: 'Could not parse Invoicing header row' });
-
     const { cols } = found;
-    if (cols.approved < 0) {
-      return res.status(500).json({ error: 'No "Approved" column found in Invoicing tab' });
-    }
+    if (cols.status < 0) return res.status(500).json({ error: 'No "Status" column found in Invoicing tab' });
 
     const targetRow = rows[rowNumber - 1] || [];
     const actualCandidate = cols.candidateName >= 0 ? String(targetRow[cols.candidateName] || '').trim() : '';
     const actualClient    = cols.clientName    >= 0 ? String(targetRow[cols.clientName] || '').trim()    : '';
     if (verify.candidate && verify.candidate !== actualCandidate) {
-      return res.status(409).json({
-        error: 'Row verification failed (candidate mismatch). Refresh and try again.',
-        expected: verify.candidate,
-        actual: actualCandidate
-      });
+      return res.status(409).json({ error: 'Row verification failed (candidate mismatch).', expected: verify.candidate, actual: actualCandidate });
     }
     if (verify.client && verify.client !== actualClient) {
-      return res.status(409).json({
-        error: 'Row verification failed (client mismatch). Refresh and try again.',
-        expected: verify.client,
-        actual: actualClient
-      });
+      return res.status(409).json({ error: 'Row verification failed (client mismatch).', expected: verify.client, actual: actualClient });
     }
 
-    const colLetter = colNumToLetter(cols.approved + 1);
+    const colLetter = colNumToLetter(cols.status + 1);
     const writeRange = `'${tab}'!${colLetter}${rowNumber}`;
     await sheets.spreadsheets.values.update({
       spreadsheetId: SHEET_ID,
       range: writeRange,
       valueInputOption: 'USER_ENTERED',
-      requestBody: { values: [['TRUE']] }
+      requestBody: { values: [[canonical]] }
     });
 
     return res.status(200).json({
       ok: true,
       rowNumber,
-      approvedAt: new Date().toISOString(),
-      candidate: actualCandidate,
-      client: actualClient,
-      cellWritten: writeRange
+      status: canonical,
+      cellWritten: writeRange,
+      savedAt: new Date().toISOString()
     });
   } catch (e) {
-    console.error('[api/approve] Error:', e);
+    console.error('[api/status] Error:', e);
     return res.status(500).json({ error: e.message });
   }
 }

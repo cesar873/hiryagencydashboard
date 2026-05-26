@@ -11,8 +11,8 @@ import { google } from 'googleapis';
 import {
   SHEET_ID,
   getSheetsClient,
-  findReceivablesTab, findReceivablesHeader,
-  findClientsReceivablesTab, findClientsReceivablesHeader
+  findInvoicingTab, findInvoicingHeader,
+  findBookkeepingTab, parseBookkeepingRows
 } from '../lib/sheets.js';
 const CACHE_TTL_SECONDS = 300; // 5 minutes
 const TRAILING_MONTHS = 13;    // dashboard shows last 13 months
@@ -206,10 +206,10 @@ async function fetchBudgetData(sheets, sheetId, tabs) {
   };
 }
 
-// ── Receivables / Cash Flow reader ──────────────────────────────
-async function fetchReceivablesData(sheets, tabs) {
-  const tab = await findReceivablesTab(sheets) || tabs.find(t => /^receivable/i.test(t));
-  if (!tab) return { tab: null, invoices: [], meta: { error: 'No Receivables tab found' } };
+// ── Invoicing tab reader (merged: was Candidates + Clients Receivables) ──
+async function fetchInvoicingData(sheets) {
+  const tab = await findInvoicingTab(sheets);
+  if (!tab) return { tab: null, invoices: [], meta: { error: 'No Invoicing tab found' } };
 
   let res;
   try {
@@ -219,124 +219,12 @@ async function fetchReceivablesData(sheets, tabs) {
       valueRenderOption: 'FORMATTED_VALUE'
     });
   } catch (e) {
-    return { tab, invoices: [], meta: { error: 'Read failed: ' + e.message } };
+    return { tab, invoices: [], meta: { error: 'Invoicing read failed: ' + e.message } };
   }
   const rows = res.data.values || [];
-  const found = findReceivablesHeader(rows);
+  const found = findInvoicingHeader(rows);
   if (!found) {
-    return { tab, invoices: [], meta: { error: 'Header row (Candidate Name / Client Name / Billed) not found' } };
-  }
-  const { headerRowIdx, cols } = found;
-
-  const invoices = [];
-  for (let i = headerRowIdx + 1; i < rows.length; i++) {
-    const row = rows[i] || [];
-    const candidate = String(row[cols.candidateName] || '').trim();
-    const client = String(row[cols.clientName] || '').trim();
-    if (!candidate && !client) continue; // skip empty rows
-    const invoiceDateRaw = String(row[cols.invoiceDate] || '').trim();
-    const billedRaw = String(row[cols.billed] || '').trim();
-    if (!candidate && !invoiceDateRaw) continue;
-
-    const approvedRaw = String(row[cols.approved] || '').trim().toLowerCase();
-    let approved = false;
-    if (approvedRaw === 'true' || approvedRaw === 'yes' || approvedRaw === '1' || approvedRaw === 'approved') approved = true;
-
-    const sentRaw = String(row[cols.sent] || '').trim();
-    let sentState = 'pipeline'; // empty cell → still in pipeline
-    if (sentRaw) {
-      const sLower = sentRaw.toLowerCase();
-      // Paid / collected
-      if (sLower === 'paid' || sLower === 'fully paid' || sLower === 'collected') {
-        sentState = 'paid';
-      }
-      // Overdue / late
-      else if (sLower === 'overdue' || sLower === 'late' || sLower === 'past due') {
-        sentState = 'overdue';
-      }
-      // Sent / Open / Unpaid / Partially Paid — all = outstanding (sent, not yet paid)
-      else if (sLower === 'sent' || sLower === 'open' || sLower === 'unpaid' ||
-               sLower === 'partially paid' || sLower === 'awaiting payment' ||
-               sLower.includes('sent') || /^\d/.test(sentRaw)) {
-        sentState = 'sent';
-      }
-      // Unknown value — keep raw so it shows in _meta debug
-      else {
-        sentState = sLower;
-      }
-    }
-
-    const billed = num(billedRaw);
-    const commissionRaw = String(row[cols.commission] || '').trim();
-    const commission = commissionRaw; // keep as string e.g. "10%"
-    const commissionPct = num(commissionRaw); // also parsed as number
-
-    // Per-month amounts (commission $ to be collected per month)
-    const monthsData = {};
-    for (const mc of cols.monthCols) {
-      const v = num(row[mc.colIdx]);
-      if (Math.abs(v) > 0.01) monthsData[mc.label] = v;
-    }
-
-    invoices.push({
-      source: 'candidate',
-      rowNumber: i + 1,
-      invoiceDate: invoiceDateRaw,
-      dueDate: null, // candidates tab doesn't have a due date column yet
-      invoiceNum: String(row[cols.invoiceNum] || '').trim(),
-      candidate,
-      client,
-      jobTitle: '',
-      notes: String(row[cols.notes] || '').trim(),
-      currency: String(row[cols.currency] || '').trim() || 'USD',
-      billed,
-      commission,
-      commissionPct,
-      // For candidates the amount Hiry collects = monthly cols sum, or billed × commission%
-      amount: Object.values(monthsData).reduce((s, v) => s + v, 0) ||
-              (commissionPct && billed ? commissionPct * billed / 100 : 0),
-      approved,
-      sentRaw,
-      sentState, // pipeline | sent | paid | overdue
-      datePaid: null,
-      months: monthsData
-    });
-  }
-
-  return {
-    tab,
-    invoices,
-    cols,
-    headerRowIdx,
-    meta: {
-      total: invoices.length,
-      pipeline: invoices.filter(x => x.sentState === 'pipeline').length,
-      sent: invoices.filter(x => x.sentState === 'sent').length,
-      paid: invoices.filter(x => x.sentState === 'paid').length,
-      overdue: invoices.filter(x => x.sentState === 'overdue').length
-    }
-  };
-}
-
-// ── Clients Receivables tab reader ─────────────────────────────
-async function fetchClientReceivablesData(sheets, tabs) {
-  const tab = await findClientsReceivablesTab(sheets);
-  if (!tab) return { tab: null, invoices: [], meta: { error: 'No Clients Receivables tab found' } };
-
-  let res;
-  try {
-    res = await sheets.spreadsheets.values.get({
-      spreadsheetId: SHEET_ID,
-      range: `'${tab}'!A1:Z500`,
-      valueRenderOption: 'FORMATTED_VALUE'
-    });
-  } catch (e) {
-    return { tab, invoices: [], meta: { error: 'Clients receivables read failed: ' + e.message } };
-  }
-  const rows = res.data.values || [];
-  const found = findClientsReceivablesHeader(rows);
-  if (!found) {
-    return { tab, invoices: [], meta: { error: 'Clients receivables header not detected (need Client Name + Candidate Name + Approved column)' } };
+    return { tab, invoices: [], meta: { error: 'Invoicing header not detected (need Client Name + Candidate Name + Invoice Amount/Approved column)' } };
   }
   const { headerRowIdx, cols } = found;
 
@@ -346,62 +234,84 @@ async function fetchClientReceivablesData(sheets, tabs) {
     return s === 'true' || s === 'yes' || s === '1' || s === 'checked' || s === 'x' || s === '✓';
   }
 
+  // Normalise the Service column to canonical "Placement" | "Recruitment".
+  function normaliseService(raw) {
+    const s = String(raw || '').trim().toLowerCase();
+    if (!s) return '';
+    if (/^placement|placed|candidate/.test(s)) return 'Placement';
+    if (/^recruit|client|search/.test(s))      return 'Recruitment';
+    // Unknown value — pass through so the UI can show what the sheet has
+    return String(raw).trim();
+  }
+
   const invoices = [];
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] || [];
-    const client = String(row[cols.clientName] || '').trim();
-    const candidate = String(row[cols.candidateName] || '').trim();
-    const invDate = String(row[cols.date] || '').trim();
-    if (!client && !candidate && !invDate) continue; // skip empty rows
+    const client = cols.clientName >= 0 ? String(row[cols.clientName] || '').trim() : '';
+    const candidate = cols.candidateName >= 0 ? String(row[cols.candidateName] || '').trim() : '';
+    const invDate = cols.date >= 0 ? String(row[cols.date] || '').trim() : '';
+    if (!client && !candidate && !invDate) continue; // skip blank rows
 
-    const approved = parseBool(row[cols.approved]);
-    const sent = parseBool(row[cols.sent]);
-    const statusRaw = String(row[cols.status] || '').trim();
+    const service = cols.service >= 0 ? normaliseService(row[cols.service]) : '';
+    const approved = cols.approved >= 0 ? parseBool(row[cols.approved]) : false;
+    const sent = cols.sent >= 0 ? parseBool(row[cols.sent]) : false;
+    const statusRaw = cols.status >= 0 ? String(row[cols.status] || '').trim() : '';
     const sLower = statusRaw.toLowerCase();
-    const datePaid = String(row[cols.datePaid] || '').trim();
+    const datePaid = cols.datePaid >= 0 ? String(row[cols.datePaid] || '').trim() : '';
 
-    // Derive sentState — unified vocabulary
+    // sentState is the high-level lifecycle bucket the UI groups on.
+    //   pipeline  → not yet approved OR approved-but-not-sent (drafts + ready)
+    //   sent      → approved + sent + unpaid / partially paid / open
+    //   paid      → fully paid / date-paid present
+    //   overdue   → outstanding past dueDate (computed at render time; default here)
     let sentState;
     if (sLower === 'paid' || sLower === 'fully paid' || sLower === 'collected' || datePaid) {
       sentState = 'paid';
     } else if (sLower === 'overdue' || sLower === 'late' || sLower === 'past due') {
       sentState = 'overdue';
     } else if (!approved || !sent) {
-      // Not yet approved OR not yet sent → still in pipeline
       sentState = 'pipeline';
     } else {
-      // Approved + Sent + not paid yet (status = Open/empty/Unpaid/Partially Paid)
       sentState = 'sent';
     }
 
-    const invoiceAmount = num(row[cols.invoiceAmount]);
-    const monthlySalary = num(row[cols.monthlySalary]);
-    const commission = String(row[cols.commission] || '').trim();
-    const commissionPct = num(commission);
-    const deposit = num(row[cols.deposit]);
+    const placedSalary = cols.monthlySalary >= 0 ? num(row[cols.monthlySalary]) : 0;
+    const finalAmount  = cols.invoiceAmount >= 0 ? num(row[cols.invoiceAmount]) : 0;
+    const commissionStr = cols.commission >= 0 ? String(row[cols.commission] || '').trim() : '';
+    const commissionPct = num(commissionStr);
+    const deposit = cols.deposit >= 0 ? num(row[cols.deposit]) : 0;
 
     invoices.push({
-      source: 'client',
       rowNumber: i + 1,
-      invoiceDate: invDate,
-      dueDate: String(row[cols.dueDate] || '').trim(),
-      invoiceNum: String(row[cols.invoiceNum] || '').trim(),
-      candidate,
+      // Identity
+      service,                          // "Placement" | "Recruitment"
       client,
-      jobTitle: String(row[cols.jobTitle] || '').trim(),
-      notes: String(row[cols.notes] || '').trim(),
-      currency: String(row[cols.currency] || '').trim() || 'USD',
-      billed: monthlySalary, // underlying value = monthly salary for client tab
-      commission,
+      candidate,
+      jobTitle: cols.jobTitle >= 0 ? String(row[cols.jobTitle] || '').trim() : '',
+      // Money
+      placedSalary,
+      commission: commissionStr,
       commissionPct,
       deposit,
-      amount: invoiceAmount, // explicit — what Hiry actually invoices/collects
+      finalAmount,                      // Hiry's actual receivable for this line
+      amount: finalAmount,              // alias kept for legacy code paths
+      currency: cols.currency >= 0 ? (String(row[cols.currency] || '').trim() || 'USD') : 'USD',
+      // Lifecycle
       approved,
       sent,
-      sentRaw: statusRaw,
+      statusRaw,                        // exactly what the sheet has — for the Status popover
       sentState,
+      // Dates
+      invoiceDate: invDate,
+      dueDate: cols.dueDate >= 0 ? String(row[cols.dueDate] || '').trim() : '',
       datePaid,
-      billingAddress: String(row[cols.billingAddress] || '').trim(),
+      // Detail / breakdown
+      invoiceNum: cols.invoiceNum >= 0 ? String(row[cols.invoiceNum] || '').trim() : '',
+      billingAddress: cols.billingAddress >= 0 ? String(row[cols.billingAddress] || '').trim() : '',
+      notes: cols.notes >= 0 ? String(row[cols.notes] || '').trim() : '',
+      // Legacy aliases — kept so older callers keep working during the migration
+      source: service === 'Placement' ? 'candidate' : 'client',
+      billed: placedSalary,
       months: {}
     });
   }
@@ -416,7 +326,52 @@ async function fetchClientReceivablesData(sheets, tabs) {
       pipeline: invoices.filter(x => x.sentState === 'pipeline').length,
       sent: invoices.filter(x => x.sentState === 'sent').length,
       paid: invoices.filter(x => x.sentState === 'paid').length,
-      overdue: invoices.filter(x => x.sentState === 'overdue').length
+      overdue: invoices.filter(x => x.sentState === 'overdue').length,
+      placement: invoices.filter(x => x.service === 'Placement').length,
+      recruitment: invoices.filter(x => x.service === 'Recruitment').length
+    }
+  };
+}
+
+// ── Bookkeeping tab reader (CoA + unclear-transaction queue) ─────
+async function fetchBookkeepingData(sheets) {
+  const tab = await findBookkeepingTab(sheets);
+  if (!tab) {
+    return {
+      tab: null,
+      coa: [],
+      transactions: [],
+      meta: { error: 'No Bookkeeping tab found', awaitingCount: 0, clarifiedCount: 0 }
+    };
+  }
+  let res;
+  try {
+    res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: `'${tab}'!A1:O500`,
+      valueRenderOption: 'FORMATTED_VALUE'
+    });
+  } catch (e) {
+    return {
+      tab,
+      coa: [],
+      transactions: [],
+      meta: { error: 'Bookkeeping read failed: ' + e.message, awaitingCount: 0, clarifiedCount: 0 }
+    };
+  }
+  const rows = res.data.values || [];
+  const { coa, transactions } = parseBookkeepingRows(rows);
+  const awaitingCount = transactions.filter(t => !t.cleared).length;
+  const clarifiedCount = transactions.length - awaitingCount;
+  return {
+    tab,
+    coa,
+    transactions,
+    meta: {
+      total: transactions.length,
+      awaitingCount,
+      clarifiedCount,
+      coaCount: coa.length
     }
   };
 }
@@ -760,30 +715,18 @@ async function fetchSheetData() {
   // ── Budget tab read ──────────────────────────────────────────
   const budget = await fetchBudgetData(sheets, SHEET_ID, tabs);
 
-  // ── Receivables / Cash Flow tab read ────────────────────────
-  // ── Receivables tab read ─────────────────────────────────────
-  const receivablesCandidates = await fetchReceivablesData(sheets, tabs);
-  const receivablesClients = await fetchClientReceivablesData(sheets, tabs);
-  // Merge both sources into a single invoices array, then keep per-source meta for debugging.
-  const mergedInvoices = [
-    ...(receivablesCandidates.invoices || []),
-    ...(receivablesClients.invoices || [])
-  ];
+  // ── Invoicing + Bookkeeping tab read (Payments tab data) ─────
+  const invoicing = await fetchInvoicingData(sheets);
+  const bookkeeping = await fetchBookkeepingData(sheets);
+
+  // `receivables` shape is preserved for backwards-compat with the existing
+  // frontend globals (RECEIVABLES.invoices etc.). The Payments-tab rewrite
+  // can read this same object — it carries the new fields (service,
+  // placedSalary, finalAmount, statusRaw) alongside the legacy aliases.
   const receivables = {
-    invoices: mergedInvoices,
-    tabs: {
-      candidates: receivablesCandidates.tab,
-      clients: receivablesClients.tab
-    },
-    meta: {
-      candidate: receivablesCandidates.meta,
-      client: receivablesClients.meta,
-      total: mergedInvoices.length,
-      pipeline: mergedInvoices.filter(x => x.sentState === 'pipeline').length,
-      sent: mergedInvoices.filter(x => x.sentState === 'sent').length,
-      paid: mergedInvoices.filter(x => x.sentState === 'paid').length,
-      overdue: mergedInvoices.filter(x => x.sentState === 'overdue').length
-    }
+    invoices: invoicing.invoices,
+    tab: invoicing.tab,
+    meta: invoicing.meta
   };
 
   return {
@@ -807,6 +750,7 @@ async function fetchSheetData() {
     EXP_TXNS,
     budget,
     receivables,
+    bookkeeping,
     _meta: {
       fetchedAt: new Date().toISOString(),
       incomeTab,
@@ -818,7 +762,10 @@ async function fetchSheetData() {
       revenueEntities: MOM_DATA.revenue.length,
       expenseEntities: MOM_DATA.expenses.length,
       budget: budget.meta,
-      receivables: receivables.meta
+      receivables: receivables.meta,
+      bookkeeping: bookkeeping.meta,
+      invoicingTab: invoicing.tab,
+      bookkeepingTab: bookkeeping.tab
     }
   };
 }

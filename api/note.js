@@ -1,5 +1,5 @@
 // POST /api/note
-// Updates the notes cell for a specific receivables row.
+// Updates the Notes cell for a specific Invoicing row.
 //
 // Body:
 //   { rowNumber: 17, note: "Awaiting client confirmation",
@@ -8,10 +8,8 @@
 import {
   SHEET_ID,
   getSheetsClient,
-  findReceivablesTab,
-  findReceivablesHeader,
-  findClientsReceivablesTab,
-  findClientsReceivablesHeader,
+  findInvoicingTab,
+  findInvoicingHeader,
   colNumToLetter
 } from '../lib/sheets.js';
 
@@ -37,15 +35,12 @@ export default async function handler(req, res) {
   if (note.length > 1000) {
     return res.status(400).json({ error: 'note exceeds 1000 chars' });
   }
-  const source = (body.source === 'client') ? 'client' : 'candidate';
   const verify = body.verify || {};
 
   try {
     const sheets = await getSheetsClient();
-    const tab = source === 'client'
-      ? await findClientsReceivablesTab(sheets)
-      : await findReceivablesTab(sheets);
-    if (!tab) return res.status(500).json({ error: `${source} receivables tab not found` });
+    const tab = await findInvoicingTab(sheets);
+    if (!tab) return res.status(500).json({ error: 'Invoicing tab not found' });
 
     const range = `'${tab}'!A1:AZ${rowNumber}`;
     const readRes = await sheets.spreadsheets.values.get({
@@ -54,16 +49,14 @@ export default async function handler(req, res) {
       valueRenderOption: 'FORMATTED_VALUE'
     });
     const rows = readRes.data.values || [];
-    const found = source === 'client'
-      ? findClientsReceivablesHeader(rows)
-      : findReceivablesHeader(rows);
-    if (!found) return res.status(500).json({ error: `Could not parse ${source} receivables header row` });
+    const found = findInvoicingHeader(rows);
+    if (!found) return res.status(500).json({ error: 'Could not parse Invoicing header row' });
     const { cols } = found;
-    if (cols.notes < 0) return res.status(500).json({ error: 'No "notes" column found' });
+    if (cols.notes < 0) return res.status(500).json({ error: 'No "Notes" column found in Invoicing tab' });
 
     const targetRow = rows[rowNumber - 1] || [];
-    const actualCandidate = String(targetRow[cols.candidateName] || '').trim();
-    const actualClient = String(targetRow[cols.clientName] || '').trim();
+    const actualCandidate = cols.candidateName >= 0 ? String(targetRow[cols.candidateName] || '').trim() : '';
+    const actualClient    = cols.clientName    >= 0 ? String(targetRow[cols.clientName] || '').trim()    : '';
     if (verify.candidate && verify.candidate !== actualCandidate) {
       return res.status(409).json({ error: 'Row verification failed (candidate mismatch).', expected: verify.candidate, actual: actualCandidate });
     }

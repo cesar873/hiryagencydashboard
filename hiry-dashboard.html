@@ -492,7 +492,7 @@ tr:last-child td { border-bottom: none; }
   <button class="tab-btn active" onclick="showTab(this,'financials')">Financials</button>
   <button class="tab-btn" onclick="showTab(this,'revenue')">Revenue</button>
   <button class="tab-btn" onclick="showTab(this,'expenses')">Expenses</button>
-  <button class="tab-btn" onclick="showTab(this,'receivables')">Cash Flow</button>
+  <button class="tab-btn" onclick="showTab(this,'payments')">Payments</button>
 </nav>
 
 <!-- ══════════════════════════════ REVENUE ══ -->
@@ -957,81 +957,95 @@ tr:last-child td { border-bottom: none; }
 
 
 
-<!-- ══════════════════════════════ CASH FLOW (formerly Receivables) ══ -->
-<div id="receivables" class="page">
+<!-- ══════════════════════════════ PAYMENTS (formerly Cash Flow / Receivables) ══ -->
+<div id="payments" class="page">
 
+  <!-- PageHero -->
   <div class="panel gap" style="margin-bottom:14px;padding:20px 24px">
     <div style="font-size:11px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:6px">Accounts Receivable</div>
-    <h2 style="font-family:'Anton',sans-serif;font-size:38px;letter-spacing:1.5px;margin:0">CASH FLOW</h2>
-    <p class="sub" id="cfSub" style="margin-top:4px">— · live from the Receivables tab</p>
+    <h2 style="font-family:'Anton',sans-serif;font-size:38px;letter-spacing:1.5px;margin:0">PAYMENTS</h2>
+    <p class="sub" id="pmtSub" style="margin-top:4px">— · live from the Invoicing tab</p>
   </div>
 
   <!-- 5 KPI cards -->
-  <div class="kpi-grid gap" id="cfKpiGrid" style="grid-template-columns:repeat(5,1fr)">
+  <div class="kpi-grid gap" id="pmtKpiGrid" style="grid-template-columns:repeat(5,1fr)">
     <div class="kpi">
       <div class="label">Outstanding AR</div>
-      <div class="value" style="color:var(--amber)" id="cfOutstanding">—</div>
-      <div class="delta" id="cfOutstandingSub">— open invoices</div>
+      <div class="value" style="color:var(--amber)" id="pmtOutstanding">—</div>
+      <div class="delta" id="pmtOutstandingSub">— open invoices</div>
     </div>
     <div class="kpi">
       <div class="label">Overdue</div>
-      <div class="value" style="color:var(--red)" id="cfOverdue">—</div>
-      <div class="delta down" id="cfOverdueSub">—</div>
+      <div class="value" style="color:var(--red)" id="pmtOverdue">—</div>
+      <div class="delta down" id="pmtOverdueSub">—</div>
     </div>
     <div class="kpi">
       <div class="label">Due Next 7 Days</div>
-      <div class="value" id="cfDue7">—</div>
-      <div class="delta" id="cfDue7Sub">—</div>
+      <div class="value" id="pmtDue7">—</div>
+      <div class="delta" id="pmtDue7Sub">—</div>
     </div>
     <div class="kpi">
       <div class="label">Pipeline (Pre-Send)</div>
-      <div class="value" style="color:var(--blue)" id="cfPipeline">—</div>
-      <div class="delta" id="cfPipelineSub">—</div>
+      <div class="value" style="color:var(--blue)" id="pmtPipeline">—</div>
+      <div class="delta" id="pmtPipelineSub">—</div>
     </div>
     <div class="kpi">
-      <div class="label" id="cfCollectedLabel">Collected · —</div>
-      <div class="value" style="color:var(--green)" id="cfCollected">—</div>
-      <div class="delta" id="cfCollectedSub">—</div>
+      <div class="label" id="pmtCollectedLabel">Collected · —</div>
+      <div class="value" style="color:var(--green)" id="pmtCollected">—</div>
+      <div class="delta" id="pmtCollectedSub">—</div>
     </div>
   </div>
 
-  <!-- Two panels: Pipeline (left) + Outstanding (right) — equal widths to match reference -->
-  <div class="grid-12 gap" style="grid-template-columns:1fr 1fr;gap:16px;display:grid;align-items:start">
-    <!-- PIPELINE -->
-    <div class="panel" style="padding:20px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
-        <div>
-          <div style="font-size:11px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase">Pipeline</div>
-          <h2 style="font-family:'Anton',sans-serif;font-size:22px;letter-spacing:1px;margin:4px 0 0">UPCOMING INVOICES</h2>
+  <!-- Two-column workspace: ActionsCenter (left, 6/10) + OpenSummary (right, 4/10) -->
+  <div class="gap" style="display:grid;grid-template-columns:6fr 4fr;gap:16px;align-items:start">
+
+    <!-- ActionsCenter (LEFT) -->
+    <div class="panel" style="padding:20px;min-width:0">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:12px;flex-wrap:wrap">
+        <div id="pmtAcHeader">
+          <div style="font-size:11px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase" id="pmtAcEyebrow">Pipeline</div>
+          <h2 style="font-family:'Anton',sans-serif;font-size:22px;letter-spacing:1px;margin:4px 0 0" id="pmtAcTitle">UPCOMING INVOICES</h2>
         </div>
-        <button id="cfBreakdownToggle" onclick="toggleCfBreakdown()" class="cf-ghost-btn">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          <span id="cfBreakdownLabel">Show breakdown</span>
-        </button>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button id="pmtBreakdownToggle" onclick="togglePmtBreakdown()" class="cf-ghost-btn" style="display:inline-flex;align-items:center;gap:6px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span id="pmtBreakdownLabel">Show breakdown</span>
+          </button>
+          <!-- Invoices | Transactions toggle -->
+          <div style="display:inline-flex;background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:8px;padding:3px;align-items:center;gap:2px" id="pmtModeToggle">
+            <button onclick="setPmtMode('invoices')" id="pmtModeInvoices"
+              style="background:#1390eb;color:white;border:none;padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.4px">Invoices</button>
+            <button onclick="setPmtMode('transactions')" id="pmtModeTransactions"
+              style="background:transparent;color:rgba(255,255,255,0.7);border:none;padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.4px;position:relative">
+              Transactions
+              <span id="pmtTxBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:#ef4444;color:white;font-size:9px;font-weight:800;padding:2px 6px;border-radius:10px;letter-spacing:0;min-width:18px;text-align:center;box-shadow:0 0 0 0 rgba(239,68,68,0.6);animation:pmt-ping 1.4s infinite"></span>
+            </button>
+          </div>
+        </div>
       </div>
-      <div>
-        <table style="width:100%;border-collapse:collapse" id="cfPipelineTbl">
+      <div style="overflow-x:auto;min-width:0">
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed" id="pmtAcTbl">
           <thead></thead>
-          <tbody><tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted)">Loading…</td></tr></tbody>
+          <tbody><tr><td colspan="8" style="padding:40px;text-align:center;color:var(--muted)">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
 
-    <!-- OUTSTANDING -->
-    <div class="panel" style="padding:20px">
+    <!-- OpenSummary (RIGHT) -->
+    <div class="panel" style="padding:20px;min-width:0">
       <div style="font-size:11px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase">Outstanding Invoices</div>
-      <div style="font-family:'Anton',sans-serif;font-size:32px;letter-spacing:1.5px;margin-top:4px" id="cfOutstandingHead">—</div>
-      <div style="color:var(--muted);font-size:12px;margin-top:4px" id="cfOutstandingHeadSub">— sent, not yet collected</div>
+      <div style="font-family:'Anton',sans-serif;font-size:32px;letter-spacing:1.5px;margin-top:4px" id="pmtOutstandingHead">—</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:4px" id="pmtOutstandingHeadSub">— sent, not yet collected</div>
 
       <div style="display:flex;align-items:center;gap:18px;margin-top:18px">
-        <div style="width:120px;height:120px;position:relative;flex-shrink:0">
-          <canvas id="cfDonut"></canvas>
+        <div style="width:130px;height:130px;position:relative;flex-shrink:0">
+          <canvas id="pmtDonut"></canvas>
           <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
             <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px">Open</div>
-            <div style="font-family:'Anton',sans-serif;font-size:17px;letter-spacing:0.5px" id="cfDonutCenter">—</div>
+            <div style="font-family:'Anton',sans-serif;font-size:18px;letter-spacing:0.5px" id="pmtDonutCenter">—</div>
           </div>
         </div>
-        <div style="flex:1;font-size:12px;min-width:0" id="cfDonutLegend"></div>
+        <div style="flex:1;font-size:12px;min-width:0" id="pmtDonutLegend"></div>
       </div>
 
       <div style="margin-top:24px">
@@ -1040,27 +1054,138 @@ tr:last-child td { border-bottom: none; }
           <div style="font-size:10px;color:var(--muted)">click any row for details</div>
         </div>
         <div style="margin-top:8px;overflow:hidden">
-          <table style="width:100%;border-collapse:collapse;table-layout:fixed" id="cfOutstandingTbl">
+          <table style="width:100%;border-collapse:collapse;table-layout:fixed" id="pmtOutstandingTbl">
             <colgroup>
-              <col style="width:40%">
+              <col style="width:28%">
               <col style="width:24%">
               <col style="width:14%">
-              <col style="width:22%">
+              <col style="width:18%">
+              <col style="width:16%">
             </colgroup>
             <thead><tr style="border-bottom:1px solid var(--card-border)">
-              <th style="text-align:left;padding:8px 8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Client / Candidate</th>
-              <th class="num" style="padding:8px 8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Amount</th>
-              <th class="num" style="padding:8px 8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Due</th>
-              <th style="padding:8px 8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Age</th>
+              <th style="text-align:left;padding:8px 6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Client</th>
+              <th style="text-align:left;padding:8px 6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Service</th>
+              <th class="num" style="padding:8px 6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Amount</th>
+              <th class="num" style="padding:8px 6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Due</th>
+              <th class="num" style="padding:8px 6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Days</th>
             </tr></thead>
-            <tbody><tr><td colspan="4" style="padding:30px;text-align:center;color:var(--muted)">Loading…</td></tr></tbody>
+            <tbody><tr><td colspan="5" style="padding:30px;text-align:center;color:var(--muted)">Loading…</td></tr></tbody>
           </table>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- AR by client × month grid -->
+  <div class="panel gap" style="margin-top:16px;padding:20px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:12px;flex-wrap:wrap">
+      <div>
+        <h2 style="font-family:'Anton',sans-serif;font-size:22px;letter-spacing:1px;margin:0">AR by client × month</h2>
+        <p class="sub" style="margin-top:4px;font-size:11px;color:var(--muted)">Click any cell to see the invoices behind it · color = worst status in cell · △ marks discounts, ad-spend, or other adjustments</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px">
+          Status
+          <select id="pmtArStatus" onchange="renderArGrid()" style="background:rgba(255,255,255,0.04);border:1px solid var(--card-border);color:white;font-size:11px;padding:5px 8px;border-radius:6px">
+            <option value="">All statuses</option>
+            <option value="pipeline">Pipeline</option>
+            <option value="sent">Sent</option>
+            <option value="overdue">Overdue</option>
+            <option value="paid">Paid</option>
+          </select>
+        </label>
+        <input type="text" id="pmtArSearch" oninput="renderArGrid()" placeholder="Find client" style="background:rgba(255,255,255,0.04);border:1px solid var(--card-border);color:white;font-size:11px;padding:6px 10px;border-radius:6px;width:160px"/>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table id="pmtArGrid" style="width:100%;border-collapse:separate;border-spacing:4px;min-width:720px">
+        <thead></thead>
+        <tbody><tr><td style="padding:40px;text-align:center;color:var(--muted)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="sub" style="margin-top:14px;font-size:10px;color:var(--muted)">Live from <a href="https://docs.google.com/spreadsheets/d/13_ta2rPtKUNmVZwbZRWC3IbOwwipf89VIA3Q0oD1n5s" target="_blank" rel="noreferrer" style="color:inherit;text-decoration:underline">Hiry Agency sheet</a> — Invoicing + Bookkeeping · cached 1 minute · period anchored to today</p>
+
 </div>
+
+<!-- ──────────────── Popovers (fixed-position, hidden by default) ──────────────── -->
+
+<!-- Status change popover -->
+<div id="pmtStatusPop" style="display:none;position:fixed;z-index:9999;background:#0b1220;border:1px solid var(--card-border);border-radius:10px;padding:14px 16px;min-width:240px;box-shadow:0 10px 40px rgba(0,0,0,0.6)">
+  <div style="font-size:10px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase">Change Status</div>
+  <div style="font-size:13px;color:white;margin-top:2px;margin-bottom:10px" id="pmtStatusPopSubject">—</div>
+  <div id="pmtStatusPopOptions" style="display:flex;flex-direction:column;gap:4px"></div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+    <button onclick="closeStatusPopover()" style="background:transparent;color:var(--muted);border:none;padding:6px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.7px;cursor:pointer">Cancel</button>
+    <button onclick="saveStatusFromPopover()" id="pmtStatusSaveBtn" style="background:#1390eb;color:white;border:none;padding:6px 16px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;cursor:pointer">Save</button>
+  </div>
+</div>
+
+<!-- Category dropdown popover (Bookkeeping) -->
+<div id="pmtCategoryPop" style="display:none;position:fixed;z-index:9999;background:#0b1220;border:1px solid var(--card-border);border-radius:10px;padding:12px 14px;min-width:240px;max-height:340px;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.6)">
+  <div style="font-size:10px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:8px">Pick a category</div>
+  <input type="text" id="pmtCategorySearch" oninput="filterCategoryOptions()" placeholder="Search…" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--card-border);color:white;font-size:12px;padding:6px 10px;border-radius:6px;margin-bottom:8px"/>
+  <div id="pmtCategoryOptions" style="display:flex;flex-direction:column;gap:2px"></div>
+  <div style="display:flex;justify-content:flex-end;margin-top:10px">
+    <button onclick="closeCategoryPopover()" style="background:transparent;color:var(--muted);border:none;padding:6px 12px;font-size:11px;cursor:pointer">Close</button>
+  </div>
+</div>
+
+<!-- Comment textarea popover (Bookkeeping) -->
+<div id="pmtCommentPop" style="display:none;position:fixed;z-index:9999;background:#0b1220;border:1px solid var(--card-border);border-radius:10px;padding:14px 16px;min-width:300px;box-shadow:0 10px 40px rgba(0,0,0,0.6)">
+  <div style="font-size:10px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase">Add a comment</div>
+  <div style="font-size:11px;color:var(--muted);margin-top:2px;margin-bottom:8px" id="pmtCommentPopSubject">—</div>
+  <textarea id="pmtCommentText" rows="3" placeholder="e.g. personal — please reclassify" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--card-border);color:white;font-size:13px;padding:8px 10px;border-radius:6px;resize:vertical;font-family:inherit"></textarea>
+  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
+    <button onclick="closeCommentPopover()" style="background:transparent;color:var(--muted);border:none;padding:6px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.7px;cursor:pointer">Cancel</button>
+    <button onclick="saveCommentFromPopover()" id="pmtCommentSaveBtn" style="background:#1390eb;color:white;border:none;padding:6px 16px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;cursor:pointer">Save</button>
+  </div>
+</div>
+
+<!-- Row detail popover (invoice or transaction) -->
+<div id="pmtDetailPop" style="display:none;position:fixed;z-index:9999;background:#0b1220;border:1px solid var(--card-border);border-radius:10px;padding:18px 20px;min-width:380px;max-width:440px;box-shadow:0 10px 40px rgba(0,0,0,0.6)">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+    <div>
+      <div style="font-size:10px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase" id="pmtDetailEyebrow">Detail</div>
+      <div style="font-size:15px;color:white;margin-top:2px;font-weight:600" id="pmtDetailTitle">—</div>
+    </div>
+    <button onclick="closeDetailPopover()" style="background:transparent;color:var(--muted);border:none;font-size:18px;cursor:pointer;line-height:1;padding:0 4px">×</button>
+  </div>
+  <div id="pmtDetailBody" style="display:flex;flex-direction:column;gap:8px;font-size:13px;margin-top:8px"></div>
+</div>
+
+<style>
+  @keyframes pmt-ping {
+    0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.6); }
+    70%  { box-shadow: 0 0 0 10px rgba(239,68,68,0); }
+    100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+  }
+  .pmt-pill {
+    display:inline-block;font-size:9px;padding:3px 8px;border-radius:4px;
+    text-transform:uppercase;letter-spacing:0.6px;font-weight:700;line-height:1.2;
+  }
+  .pmt-pill-placement   { background:rgba(19,144,235,0.18);color:#1390eb; }
+  .pmt-pill-recruitment { background:rgba(192,132,252,0.18);color:#c084fc; }
+  .pmt-status-pill {
+    display:inline-block;font-size:9px;padding:3px 8px;border-radius:4px;
+    text-transform:uppercase;letter-spacing:0.6px;font-weight:700;line-height:1.2;
+  }
+  .pmt-row { border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; transition: background 0.12s; }
+  .pmt-row:hover { background: rgba(255,255,255,0.02); }
+  .pmt-cta {
+    background:#1390eb;color:white;border:none;padding:5px 12px;border-radius:6px;
+    font-size:10px;font-weight:700;cursor:pointer;letter-spacing:0.5px;text-transform:uppercase;
+  }
+  .pmt-cta:hover { filter:brightness(1.1); }
+  .pmt-cta-filled-cat { background:rgba(34,197,94,0.18);color:#22c55e; }
+  .pmt-cta-filled-com { background:rgba(245,158,11,0.18);color:#f59e0b; }
+  .pmt-ghost {
+    background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.7);border:1px solid var(--card-border);
+    padding:4px 10px;border-radius:6px;font-size:10px;cursor:pointer;letter-spacing:0.5px;text-transform:uppercase;font-weight:600;
+  }
+  .pmt-ghost:hover { background:rgba(255,255,255,0.1); }
+</style>
 
 <script>
 Chart.defaults.color = 'rgba(255,255,255,0.65)';
@@ -1079,6 +1204,7 @@ let cogsTalent = [], cogsCSM = [], cogsInt = [], cogsFreel = [], cogsRef = [];
 let opexSoftware = [], opexRecruit = [], opexStripe = [], opexAds = [], opexTravel = [], opexOther = [];
 let BUDGET = { months: [], byMonth: {}, meta: {} };
 let RECEIVABLES = { invoices: [], totals: {}, meta: {} };
+let BOOKKEEPING = { coa: [], transactions: [], meta: { awaitingCount: 0 } };
 let isForecast = []; // per-month boolean — true = forecast/projection, false = actuals
 
 // ── Forecast styling helpers (used by all charts) ─────────────
@@ -1127,7 +1253,7 @@ Chart.register(ChartDataLabels);
 // ── Lazy chart system
 const chartRegistry = {};
 const chartFactories = {};
-const tabCharts = { revenue: [], expenses: [], financials: [], receivables: [] };
+const tabCharts = { revenue: [], expenses: [], financials: [], payments: [] };
 
 function defChart(tabId, chartId, configFn) {
   tabCharts[tabId].push(chartId);
@@ -1776,9 +1902,10 @@ function applyData(D) {
   EXP_TXNS = D.EXP_TXNS || [];
   BUDGET = D.budget || { months: [], byMonth: {}, meta: {} };
   RECEIVABLES = D.receivables || { invoices: [], totals: {}, meta: {} };
+  BOOKKEEPING = D.bookkeeping || { coa: [], transactions: [], meta: { awaitingCount: 0 } };
   rebuildFilterDropdowns();
   rebuildStaticKPIs();
-  renderReceivables();
+  renderPayments();
   renderPLTable();
 }
 
@@ -1894,330 +2021,916 @@ function renderPLTable() {
   tbl.innerHTML = html;
 }
 
-// ── Receivables renderer ───────────────────────────────
-// ── Cash Flow tab: render KPIs + Pipeline + Outstanding ─────
-let cfShowBreakdown = false;
-let cfDonutChart = null;
+// ═══════════════════════════════════════════════════════════════════
+// PAYMENTS TAB — renderer, mode toggle, popovers, write-back actions
+// ═══════════════════════════════════════════════════════════════════
+let pmtShowBreakdown = false;
+let pmtMode = 'invoices';            // 'invoices' | 'transactions'
+let pmtDonutChart = null;
+let pmtStatusPopState = null;        // { rowNumber, candidate, client, currentStatus, selected }
+let pmtCategoryPopState = null;      // { rowNumber, vendor, description }
+let pmtCommentPopState = null;       // { rowNumber, vendor, description }
 
-function toggleCfBreakdown() {
-  cfShowBreakdown = !cfShowBreakdown;
-  // Update the label only (preserve the SVG icon)
-  const label = document.getElementById('cfBreakdownLabel');
-  if (label) label.textContent = cfShowBreakdown ? 'Hide breakdown' : 'Show breakdown';
-  // Toggle the eye icon (open vs closed via strikethrough line)
-  const btn = document.getElementById('cfBreakdownToggle');
+function togglePmtBreakdown() {
+  pmtShowBreakdown = !pmtShowBreakdown;
+  const label = document.getElementById('pmtBreakdownLabel');
+  if (label) label.textContent = pmtShowBreakdown ? 'Hide breakdown' : 'Show breakdown';
+  const btn = document.getElementById('pmtBreakdownToggle');
   if (btn) {
     const svg = btn.querySelector('svg');
     if (svg) {
-      if (cfShowBreakdown) {
-        svg.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
-      } else {
-        svg.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
-      }
+      svg.innerHTML = pmtShowBreakdown
+        ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+        : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
     }
   }
-  renderReceivables();
+  renderPayments();
 }
 
-// Parse "20/05/2026" or "2026-05-20" into a Date
+function setPmtMode(mode) {
+  if (mode !== 'invoices' && mode !== 'transactions') return;
+  pmtMode = mode;
+  const invBtn = document.getElementById('pmtModeInvoices');
+  const txBtn  = document.getElementById('pmtModeTransactions');
+  const eyebrow = document.getElementById('pmtAcEyebrow');
+  const title   = document.getElementById('pmtAcTitle');
+  const breakdownBtn = document.getElementById('pmtBreakdownToggle');
+  if (mode === 'invoices') {
+    if (invBtn) { invBtn.style.background = '#1390eb'; invBtn.style.color = 'white'; }
+    if (txBtn)  { txBtn.style.background  = 'transparent'; txBtn.style.color = 'rgba(255,255,255,0.7)'; }
+    if (eyebrow) eyebrow.textContent = 'Pipeline';
+    if (title)   title.textContent   = 'UPCOMING INVOICES';
+    if (breakdownBtn) breakdownBtn.style.display = '';
+  } else {
+    if (txBtn)  { txBtn.style.background  = '#1390eb'; txBtn.style.color = 'white'; }
+    if (invBtn) { invBtn.style.background = 'transparent'; invBtn.style.color = 'rgba(255,255,255,0.7)'; }
+    if (eyebrow) eyebrow.textContent = 'Bookkeeping';
+    if (title)   title.textContent   = 'TRANSACTIONS';
+    if (breakdownBtn) breakdownBtn.style.display = 'none';
+    // Settle the ping halo when the user is already looking at the queue
+    const badge = document.getElementById('pmtTxBadge');
+    if (badge) badge.style.animation = 'none';
+  }
+  renderPayments();
+}
+
+// Parse "20/05/2026", "20-05-2026", "2026-05-20", "5/20/2026", or ISO into a Date.
 function parseDDMMYYYY(s) {
   if (!s) return null;
   const v = String(s).trim();
-  let m = v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if (m) return new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]));
-  m = v.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  let m = v.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
   if (m) return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+  m = v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) {
+    // Ambiguous between MDY and DMY. Hiry uses DMY in the sheet, but the
+    // Bookkeeping tab dates may come through as YYYY-MM-DD already (handled above)
+    // or as M/D/YYYY from QBO exports. Prefer DMY when the first part is > 12.
+    const a = parseInt(m[1]), b = parseInt(m[2]), y = parseInt(m[3]);
+    if (a > 12) return new Date(y, b - 1, a);   // definitely DMY
+    if (b > 12) return new Date(y, a - 1, b);   // definitely MDY
+    return new Date(y, b - 1, a);               // default DMY (Hiry convention)
+  }
   return null;
 }
 
-function renderReceivables() {
-  const data = (RECEIVABLES && RECEIVABLES.invoices) || [];
-  const fmt0 = v => '$' + Math.round(v || 0).toLocaleString();
-  const fmtK = v => {
-    const a = Math.abs(v || 0);
-    if (a >= 1000) return (v < 0 ? '-' : '') + '$' + (a / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-    return '$' + Math.round(a);
-  };
+// Format helpers
+function pmtFmt0(v) { return '$' + Math.round(v || 0).toLocaleString(); }
+function pmtFmtK(v) {
+  const a = Math.abs(v || 0);
+  if (a >= 1000) return (v < 0 ? '-' : '') + '$' + (a / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  return '$' + Math.round(a);
+}
+function pmtShortDate(s) {
+  const dt = parseDDMMYYYY(s);
+  if (!dt) return s || '—';
+  const m = dt.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+  return `${m} ${dt.getDate()}`;
+}
+function pmtMonthYearKey(s) {
+  // YYYY-MM key for AR grid bucketing
+  const dt = parseDDMMYYYY(s);
+  if (!dt) return null;
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+}
+function pmtMonthLabel(key) {
+  // 2026-05 → "MAY 2026"
+  const [y, mm] = key.split('-');
+  const NAMES = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  return `${NAMES[parseInt(mm) - 1]} ${y}`;
+}
+
+// Bucket invoices into lifecycle categories. Derives "overdue" from dueDate.
+function pmtBucketInvoices(invoices) {
   const today = new Date();
-
-  // The Cash Flow tab tracks REAL-TIME receivables, not historical P&L periods.
-  // It should always reference TODAY'S current month, not the global Period filter
-  // (which is locked to the most recent ACTUAL P&L month for the rest of the dashboard).
-  const MONTH_SHORT_LBL = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const currentMonthLabel = MONTH_SHORT_LBL[today.getMonth()] + ' ' + String(today.getFullYear()).slice(2);
-  const sub = document.getElementById('cfSub');
-  if (sub) sub.textContent = currentMonthLabel + ' · live from the Receivables tab';
-
-  // Each invoice's "amount" = the COMMISSION Hiry actually invoices (the cash inflow).
-  // `Billed` in the sheet is the underlying transaction value (placement fee owed by
-  // the client OR the candidate's salary depending on the arrangement). `Billed` × commission%
-  // = what Hiry sends an invoice for, regardless of whether the invoice goes to the client
-  // or the candidate. The monthly columns already store the commission $ — prefer those.
-  function invoiceAmount(inv) {
-    // Client tab provides `amount` directly (the Invoice Amount column).
-    // Candidate tab populates `amount` server-side from month cols or billed×commission%.
-    if (typeof inv.amount === 'number' && inv.amount !== 0) return inv.amount;
-    if (inv.months && Object.keys(inv.months).length > 0) {
-      return Object.values(inv.months).reduce((s, v) => s + v, 0);
+  const out = { pipeline: [], awaitingReview: [], scheduled: [], outstanding: [], overdue: [], paid: [], all: invoices };
+  for (const inv of invoices) {
+    let state = inv.sentState;
+    // Promote to overdue if outstanding past due date
+    if (state === 'sent' && inv.dueDate) {
+      const dueDt = parseDDMMYYYY(inv.dueDate);
+      if (dueDt && dueDt < today) state = 'overdue';
     }
-    if (inv.commissionPct && inv.billed) return inv.commissionPct * inv.billed / 100;
-    return 0;
+    inv._effectiveState = state;
+    if (state === 'pipeline') {
+      out.pipeline.push(inv);
+      if (!inv.approved) out.awaitingReview.push(inv);
+      else               out.scheduled.push(inv);
+    } else if (state === 'sent')    out.outstanding.push(inv);
+    else if (state === 'overdue') { out.outstanding.push(inv); out.overdue.push(inv); }
+    else if (state === 'paid')      out.paid.push(inv);
   }
-  // Underlying billed amount — kept for reference in the breakdown view but NOT used in KPIs
-  function underlyingBilled(inv) { return inv.billed || 0; }
+  return out;
+}
 
-  // Categorize
-  const pipeline = data.filter(i => i.sentState === 'pipeline');
-  const outstanding = data.filter(i => i.sentState === 'sent' || i.sentState === 'overdue');
-  const paid = data.filter(i => i.sentState === 'paid');
+// ── Main entry point — called from showTab / data load ──────────
+function renderPayments() {
+  const invoices = (RECEIVABLES && RECEIVABLES.invoices) || [];
+  const bk = (typeof BOOKKEEPING !== 'undefined' && BOOKKEEPING) || { coa: [], transactions: [], meta: {} };
+  const buckets = pmtBucketInvoices(invoices);
 
-  // Pipeline subgroups
-  const awaitingReview = pipeline.filter(i => !i.approved);
-  const readyToSend = pipeline.filter(i => i.approved);
+  // Subline
+  const sub = document.getElementById('pmtSub');
+  if (sub) {
+    const MONTH_SHORT_LBL = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const today = new Date();
+    const currentMonthLabel = MONTH_SHORT_LBL[today.getMonth()] + ' ' + String(today.getFullYear()).slice(2);
+    sub.textContent = currentMonthLabel + ' · live from the Invoicing tab';
+  }
 
-  // KPI totals
-  const outstandingTotal = outstanding.reduce((s, i) => s + invoiceAmount(i), 0);
-  const overdueInvs = data.filter(i => i.sentState === 'overdue');
-  const overdueTotal = overdueInvs.reduce((s, i) => s + invoiceAmount(i), 0);
-  const pipelineTotal = pipeline.reduce((s, i) => s + invoiceAmount(i), 0);
+  renderPaymentsKpis(buckets);
+  renderOutstandingSummary(buckets);
+  updateTransactionsBadge(bk);
+  if (pmtMode === 'invoices') renderInvoicesMode(buckets);
+  else                        renderTransactionsMode(bk);
+  renderArGrid(invoices);
+}
 
-  // Worst overdue age (days since invoice date)
+// ── KPI strip ───────────────────────────────────────────────────
+function renderPaymentsKpis(b) {
+  const today = new Date();
+  const sumAmt = arr => arr.reduce((s, i) => s + (i.finalAmount || i.amount || 0), 0);
+
+  const outstandingTotal = sumAmt(b.outstanding);
+  const overdueTotal     = sumAmt(b.overdue);
+  const pipelineTotal    = sumAmt(b.pipeline);
+
+  // Worst overdue age — uses dueDate if available, otherwise invoiceDate
   let worstOverdue = 0;
-  for (const i of overdueInvs) {
-    const dt = parseDDMMYYYY(i.invoiceDate);
+  for (const inv of b.overdue) {
+    const ref = inv.dueDate || inv.invoiceDate;
+    const dt = parseDDMMYYYY(ref);
     if (dt) {
       const days = Math.floor((today - dt) / 86400000);
       if (days > worstOverdue) worstOverdue = days;
     }
   }
 
-  // Due next 7 days — for invoices with an explicit dueDate (client tab provides it)
-  // that are still outstanding (sent but not paid) and due within 7 days from today.
-  const in7Days = new Date(today.getTime() + 7 * 86400000);
+  // Due next 7 days
+  const in7 = new Date(today.getTime() + 7 * 86400000);
   let due7 = 0, due7Count = 0;
-  for (const inv of outstanding) {
+  for (const inv of b.outstanding) {
     if (!inv.dueDate) continue;
     const dueDt = parseDDMMYYYY(inv.dueDate);
     if (!dueDt) continue;
-    if (dueDt >= today && dueDt <= in7Days) {
-      due7 += invoiceAmount(inv);
-      due7Count++;
-    }
+    if (dueDt >= today && dueDt <= in7) { due7 += (inv.finalAmount || inv.amount || 0); due7Count++; }
   }
 
-  // Collected this period (paid invoices with paid date in selected month)
-  // For now: count all paid invoices' commission as collected (sheet doesn't yet track paid date)
-  const collectedTotal = paid.reduce((s, i) => s + invoiceAmount(i), 0);
+  // Collected this calendar month
+  const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  let collectedTotal = 0, collectedCount = 0;
+  for (const inv of b.paid) {
+    const k = pmtMonthYearKey(inv.datePaid || inv.invoiceDate);
+    if (k === monthKey) { collectedTotal += (inv.finalAmount || inv.amount || 0); collectedCount++; }
+  }
+  const MONTH_LBL = today.toLocaleString('en-US', { month: 'short' }) + ' ' + String(today.getFullYear()).slice(2);
 
-  // Update KPI cards
-  setText('cfOutstanding', fmtK(outstandingTotal));
-  setText('cfOutstandingSub', '— ' + outstanding.length + ' open invoice' + (outstanding.length === 1 ? '' : 's'));
-  setText('cfOverdue', fmtK(overdueTotal));
-  setText('cfOverdueSub', overdueInvs.length > 0 ? `— ${overdueInvs.length} late · worst ${worstOverdue}d` : '— none overdue');
-  setText('cfDue7', due7 ? fmtK(due7) : '$0');
-  setText('cfDue7Sub', due7Count > 0 ? '— ' + due7Count + ' invoice' + (due7Count === 1 ? '' : 's') + ' · next 7 days' : '— nothing imminent');
-  setText('cfPipeline', fmtK(pipelineTotal));
-  setText('cfPipelineSub', '— ' + pipeline.length + ' drafts + ready');
-  setText('cfCollectedLabel', 'Collected · ' + currentMonthLabel);
-  setText('cfCollected', fmtK(collectedTotal));
-  setText('cfCollectedSub', paid.length > 0 ? '— ' + paid.length + ' paid' : '— 0 paid');
+  setText('pmtOutstanding', pmtFmtK(outstandingTotal));
+  setText('pmtOutstandingSub', '— ' + b.outstanding.length + ' open invoice' + (b.outstanding.length === 1 ? '' : 's'));
+  setText('pmtOverdue', pmtFmtK(overdueTotal));
+  setText('pmtOverdueSub', b.overdue.length > 0 ? `— ${b.overdue.length} late · worst ${worstOverdue}d` : '— none overdue');
+  setText('pmtDue7', due7 ? pmtFmtK(due7) : '$0');
+  setText('pmtDue7Sub', due7Count > 0 ? `— ${due7Count} invoice${due7Count === 1 ? '' : 's'} · next 7 days` : '— nothing imminent');
+  setText('pmtPipeline', pmtFmtK(pipelineTotal));
+  setText('pmtPipelineSub', `— ${b.pipeline.length} drafts + ready`);
+  setText('pmtCollectedLabel', 'Collected · ' + MONTH_LBL);
+  setText('pmtCollected', pmtFmtK(collectedTotal));
+  setText('pmtCollectedSub', collectedCount > 0 ? `— ${collectedCount} paid` : '— 0 paid');
+}
 
-  setText('cfOutstandingHead', fmtK(outstandingTotal));
-  const overdueText = overdueInvs.length > 0
-    ? outstanding.length + ' sent, not yet collected · <span style="color:var(--red)">' + fmtK(overdueTotal) + ' overdue</span>'
-    : outstanding.length + ' sent, not yet collected';
-  const headSub = document.getElementById('cfOutstandingHeadSub');
-  if (headSub) headSub.innerHTML = overdueText;
+// ── Invoices mode: Awaiting your review + Scheduled ─────────────
+function renderInvoicesMode(b) {
+  const tbl = document.getElementById('pmtAcTbl');
+  if (!tbl) return;
+  const thead = tbl.querySelector('thead');
+  const tbody = tbl.querySelector('tbody');
 
-  // ── Pipeline table ─────────────────────────
-  const pipeTbl = document.getElementById('cfPipelineTbl');
-  if (pipeTbl) {
-    const thead = pipeTbl.querySelector('thead');
-    const tbody = pipeTbl.querySelector('tbody');
+  const cols = pmtShowBreakdown
+    ? ['Date','Client','Candidate','Service','Placed Salary','Final Amount','Status','Actions','Invoice #','Due','Currency','Commission','Deposit','Date Paid']
+    : ['Date','Client','Candidate','Service','Placed Salary','Final Amount','Status','Actions'];
 
-    // Default view hides notes — click "Show breakdown" to reveal them along with
-    // service / currency / billed / commission %. Keeps the default panel narrow.
-    const cols = cfShowBreakdown
-      ? ['Date','Client','Candidate','Service','Currency','Billed','Commission','Notes']
-      : ['Date','Client','Candidate','Amount','Status','Actions'];
+  thead.innerHTML = '<tr style="border-bottom:1px solid var(--card-border)">' +
+    cols.map(c => {
+      const num = (c === 'Placed Salary' || c === 'Final Amount' || c === 'Commission' || c === 'Deposit');
+      const align = num ? 'right' : 'left';
+      const cls = num ? ' class="num"' : '';
+      return `<th${cls} style="text-align:${align};padding:10px 8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;white-space:nowrap">${c}</th>`;
+    }).join('') + '</tr>';
 
-    thead.innerHTML = '<tr style="border-bottom:1px solid var(--card-border)">' +
-      cols.map((c, idx) => {
-        const align = (c === 'Billed' || c === 'Amount' || c === 'Commission') ? ' class="num"' : '';
-        return `<th${align} style="text-align:${align ? 'right' : 'left'};padding:10px 12px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">${c}</th>`;
-      }).join('') + '</tr>';
+  function renderRow(inv) {
+    const dateStr = pmtShortDate(inv.invoiceDate);
+    const dueStr  = pmtShortDate(inv.dueDate);
+    const datePaid = inv.datePaid ? pmtShortDate(inv.datePaid) : '—';
+    const servicePill = inv.service
+      ? `<span class="pmt-pill pmt-pill-${inv.service.toLowerCase()}">${escapeHtml(inv.service)}</span>`
+      : '<span style="color:var(--muted)">—</span>';
+    const statusPill = renderStatusPill(inv);
+    const actions = inv.approved
+      ? '<button class="approve-btn" disabled style="background:rgba(34,197,94,0.18);color:#22c55e;border:none;padding:5px 10px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:0.4px;cursor:default;text-transform:uppercase">✓ Approved</button>'
+      : `<button class="pmt-cta" onclick="event.stopPropagation();approveInvoice(${inv.rowNumber}, ${JSON.stringify(inv.candidate).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.client).replace(/"/g, '&quot;')}, this)">✓ Approve</button>`;
+    const statusBtn = `<button class="pmt-ghost" style="margin-left:6px" onclick="event.stopPropagation();openStatusPopover(this, ${inv.rowNumber}, ${JSON.stringify(inv.candidate).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.client).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.statusRaw || '').replace(/"/g, '&quot;')})">Status ▾</button>`;
+    const noteBtn   = `<button class="pmt-ghost" style="margin-left:6px" onclick="event.stopPropagation();openNotePopoverFromInvoice(this, ${inv.rowNumber}, ${JSON.stringify(inv.candidate).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.client).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.notes || '').replace(/"/g, '&quot;')})">Note</button>`;
 
-    function renderPipeRow(inv) {
-      const dt = parseDDMMYYYY(inv.invoiceDate);
-      const dateStr = dt
-        ? `${dt.toLocaleString('en-US', { month: 'short' }).toUpperCase()} ${dt.getDate()}`
-        : (inv.invoiceDate || '—');
-      const amount = invoiceAmount(inv);
+    const baseCells =
+      `<td style="padding:10px 8px;font-size:11px;color:var(--muted);letter-spacing:0.6px;text-transform:uppercase;white-space:nowrap">${escapeHtml(dateStr)}</td>` +
+      `<td style="padding:10px 8px;font-size:13px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(inv.client || '')}">${escapeHtml(inv.client || '—')}</td>` +
+      `<td style="padding:10px 8px;font-size:13px;color:rgba(255,255,255,0.75);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(inv.candidate || '')}">${escapeHtml(inv.candidate || '—')}</td>` +
+      `<td style="padding:10px 8px">${servicePill}</td>` +
+      `<td class="num" style="padding:10px 8px;font-size:13px">${inv.placedSalary ? pmtFmtK(inv.placedSalary) : '—'}</td>` +
+      `<td class="num" style="padding:10px 8px;font-size:13px;font-weight:700">${inv.finalAmount ? pmtFmt0(inv.finalAmount) : '—'}</td>` +
+      `<td style="padding:10px 8px">${statusPill}</td>` +
+      `<td style="padding:10px 8px;white-space:nowrap">${actions}${statusBtn}${noteBtn}</td>`;
 
-      // Tiny CLIENT / CAND badge — same chrome as elsewhere on the dashboard
-      const sourceBadge = inv.source === 'client'
-        ? '<span style="display:inline-block;font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(19,144,235,0.15);color:#1390eb;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-right:6px;vertical-align:middle">Client</span>'
-        : '<span style="display:inline-block;font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(192,132,252,0.15);color:#c084fc;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-right:6px;vertical-align:middle">Cand</span>';
+    const breakdownCells = pmtShowBreakdown
+      ? `<td style="padding:10px 8px;font-size:12px;color:var(--muted);white-space:nowrap">${escapeHtml(inv.invoiceNum || '—')}</td>` +
+        `<td style="padding:10px 8px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;white-space:nowrap">${escapeHtml(dueStr)}</td>` +
+        `<td style="padding:10px 8px;font-size:12px;color:var(--muted)">${escapeHtml(inv.currency || '')}</td>` +
+        `<td class="num" style="padding:10px 8px;font-size:12px;color:var(--muted)">${escapeHtml(inv.commission || '—')}</td>` +
+        `<td class="num" style="padding:10px 8px;font-size:12px;color:var(--muted)">${inv.deposit ? pmtFmt0(inv.deposit) : '—'}</td>` +
+        `<td style="padding:10px 8px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;white-space:nowrap">${escapeHtml(datePaid)}</td>`
+      : '';
 
-      const sourceAttr = JSON.stringify(inv.source || 'candidate').replace(/"/g, '&quot;');
-      const candidateAttr = JSON.stringify(inv.candidate).replace(/"/g, '&quot;');
-      const clientAttr = JSON.stringify(inv.client).replace(/"/g, '&quot;');
+    const overflowRow = pmtShowBreakdown && (inv.jobTitle || inv.billingAddress || inv.notes)
+      ? `<tr><td colspan="${cols.length}" style="padding:0 8px 10px;font-size:11px;color:var(--muted);background:rgba(255,255,255,0.02)">` +
+        (inv.jobTitle       ? `<div><b style="color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.6px;font-size:10px">Job</b> · ${escapeHtml(inv.jobTitle)}</div>` : '') +
+        (inv.billingAddress ? `<div><b style="color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.6px;font-size:10px">Bill to</b> · ${escapeHtml(inv.billingAddress)}</div>` : '') +
+        (inv.notes          ? `<div><b style="color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.6px;font-size:10px">Notes</b> · ${escapeHtml(inv.notes)}</div>` : '') +
+        '</td></tr>'
+      : '';
 
-      if (cfShowBreakdown) {
-        const noteInput = `<input type="text" value="${escapeHtml(inv.notes || '')}" onblur="saveNote(${inv.rowNumber}, ${sourceAttr}, ${candidateAttr}, ${clientAttr}, this.value, this)" placeholder="Add note…" style="background:transparent;border:1px solid transparent;color:rgba(255,255,255,0.85);font-size:12px;padding:4px 6px;border-radius:4px;width:100%;min-width:160px;font-family:'DM Sans',sans-serif" onfocus="this.style.borderColor='rgba(255,255,255,0.2)'"/>`;
-        return '<tr style="border-bottom:1px solid rgba(255,255,255,0.04)">' +
-          `<td style="padding:10px 12px;font-size:11px;color:var(--muted);letter-spacing:0.6px;text-transform:uppercase">${escapeHtml(dateStr)}</td>` +
-          `<td style="padding:10px 12px;font-size:13px">${sourceBadge}${escapeHtml(inv.client)}</td>` +
-          `<td style="padding:10px 12px;font-size:13px;color:rgba(255,255,255,0.7)">${escapeHtml(inv.candidate)}</td>` +
-          `<td style="padding:10px 12px;font-size:13px;color:var(--muted)">${escapeHtml(inv.jobTitle || 'Placement')}</td>` +
-          `<td style="padding:10px 12px;font-size:13px;color:var(--muted)">${escapeHtml(inv.currency)}</td>` +
-          `<td class="num" style="padding:10px 12px;font-size:13px">${fmt0(inv.billed)}</td>` +
-          `<td class="num" style="padding:10px 12px;font-size:13px;color:var(--muted)">${escapeHtml(inv.commission)}</td>` +
-          `<td style="padding:10px 12px">${noteInput}</td>` +
-          '</tr>';
+    return `<tr class="pmt-row" onclick="openInvoiceDetail(${inv.rowNumber})">${baseCells}${breakdownCells}</tr>${overflowRow}`;
+  }
+
+  function sectionHeader(label, count, hint, color) {
+    const total = b[label === 'AWAITING YOUR REVIEW' ? 'awaitingReview' : 'scheduled']
+      .reduce((s, i) => s + (i.finalAmount || i.amount || 0), 0);
+    return `<tr><td colspan="${cols.length}" style="padding:14px 8px 6px;background:rgba(255,255,255,0.02)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+        <div style="font-family:'Anton',sans-serif;font-size:13px;letter-spacing:1px;color:${color}">${label} · ${count}</div>
+        <div style="font-family:'Anton',sans-serif;font-size:13px;letter-spacing:0.5px;color:rgba(255,255,255,0.7)">${pmtFmtK(total)}</div>
+      </div>
+      ${hint ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${hint}</div>` : ''}
+    </td></tr>`;
+  }
+
+  let html = '';
+  if (b.awaitingReview.length > 0) {
+    html += sectionHeader('AWAITING YOUR REVIEW', b.awaitingReview.length, 'Approve to release for sending · edit notes or status if anything needs changing', 'var(--blue)');
+    for (const inv of b.awaitingReview) html += renderRow(inv);
+  }
+  if (b.scheduled.length > 0) {
+    html += sectionHeader('SCHEDULED', b.scheduled.length, 'Drafts and ready-to-send · sorted by invoice date', 'var(--green)');
+    for (const inv of b.scheduled) html += renderRow(inv);
+  }
+  if (b.pipeline.length === 0) {
+    const err = (RECEIVABLES && RECEIVABLES.meta && RECEIVABLES.meta.error) || 'No upcoming invoices.';
+    html = `<tr><td colspan="${cols.length}" style="padding:40px;text-align:center;color:var(--muted)">${escapeHtml(err)}</td></tr>`;
+  }
+  tbody.innerHTML = html;
+}
+
+function renderStatusPill(inv) {
+  const s = (inv.statusRaw || '').trim();
+  if (!s) {
+    return inv.approved
+      ? '<span class="pmt-status-pill" style="background:rgba(34,197,94,0.18);color:#22c55e">Ready</span>'
+      : '<span class="pmt-status-pill" style="background:rgba(192,132,252,0.18);color:#c084fc">Client Review</span>';
+  }
+  const lower = s.toLowerCase();
+  let bg = 'rgba(255,255,255,0.08)', color = 'rgba(255,255,255,0.85)';
+  if (/client review/.test(lower))      { bg = 'rgba(192,132,252,0.18)'; color = '#c084fc'; }
+  else if (/agencfo review/.test(lower)) { bg = 'rgba(245,158,11,0.18)'; color = '#f59e0b'; }
+  else if (/in progress/.test(lower))   { bg = 'rgba(255,255,255,0.08)'; color = 'rgba(255,255,255,0.7)'; }
+  else if (/ready/.test(lower))         { bg = 'rgba(34,197,94,0.18)';  color = '#22c55e'; }
+  else if (/fully paid|paid|collected/.test(lower)) { bg = 'rgba(34,197,94,0.18)'; color = '#22c55e'; }
+  else if (/partially paid/.test(lower)) { bg = 'rgba(253,224,71,0.18)'; color = '#fde047'; }
+  else if (/overdue|late|past due/.test(lower)) { bg = 'rgba(239,68,68,0.18)'; color = '#ef4444'; }
+  else if (/unpaid|sent|open/.test(lower)) { bg = 'rgba(245,158,11,0.18)'; color = '#f59e0b'; }
+  return `<span class="pmt-status-pill" style="background:${bg};color:${color}">${escapeHtml(s)}</span>`;
+}
+
+// ── Transactions mode (Bookkeeping clarification queue) ─────────
+function renderTransactionsMode(bk) {
+  const tbl = document.getElementById('pmtAcTbl');
+  if (!tbl) return;
+  const thead = tbl.querySelector('thead');
+  const tbody = tbl.querySelector('tbody');
+
+  const cols = ['Date','Description','Vendor','Amount','Account','Category','Comment'];
+  thead.innerHTML = '<tr style="border-bottom:1px solid var(--card-border)">' +
+    cols.map(c => {
+      const num = (c === 'Amount');
+      const align = num ? 'right' : 'left';
+      return `<th style="text-align:${align};padding:10px 8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;white-space:nowrap">${c}</th>`;
+    }).join('') + '</tr>';
+
+  const tx = bk.transactions || [];
+  const awaiting = tx.filter(t => !t.cleared);
+  const clarified = tx.filter(t => t.cleared);
+
+  function renderTxRow(t) {
+    const isCatFilled = !!(t.category && t.category.trim());
+    const isComFilled = !!(t.comment && t.comment.trim());
+    const catBtn = isCatFilled
+      ? `<button class="pmt-cta pmt-cta-filled-cat" onclick="event.stopPropagation();openCategoryPopover(this, ${t.rowNumber}, ${JSON.stringify(t.vendor).replace(/"/g, '&quot;')}, ${JSON.stringify(t.description).replace(/"/g, '&quot;')}, ${JSON.stringify(t.category).replace(/"/g, '&quot;')})" title="${escapeHtml(t.category)}">${escapeHtml(truncate(t.category, 18))}</button>`
+      : `<button class="pmt-cta" onclick="event.stopPropagation();openCategoryPopover(this, ${t.rowNumber}, ${JSON.stringify(t.vendor).replace(/"/g, '&quot;')}, ${JSON.stringify(t.description).replace(/"/g, '&quot;')}, '')">Category</button>`;
+    const comBtn = isComFilled
+      ? `<button class="pmt-cta pmt-cta-filled-com" onclick="event.stopPropagation();openCommentPopover(this, ${t.rowNumber}, ${JSON.stringify(t.vendor).replace(/"/g, '&quot;')}, ${JSON.stringify(t.description).replace(/"/g, '&quot;')}, ${JSON.stringify(t.comment).replace(/"/g, '&quot;')})" title="${escapeHtml(t.comment)}">${escapeHtml(truncate(t.comment, 18))}</button>`
+      : `<button class="pmt-cta" onclick="event.stopPropagation();openCommentPopover(this, ${t.rowNumber}, ${JSON.stringify(t.vendor).replace(/"/g, '&quot;')}, ${JSON.stringify(t.description).replace(/"/g, '&quot;')}, '')">Comment</button>`;
+
+    const amountNum = (function parse(s) { const n = parseFloat(String(s).replace(/[^0-9.\-]/g, '')); return isNaN(n) ? 0 : n; })(t.amountRaw);
+
+    return `<tr class="pmt-row" onclick="openTransactionDetail(${t.rowNumber})">` +
+      `<td style="padding:10px 8px;font-size:11px;color:var(--muted);letter-spacing:0.6px;white-space:nowrap">${escapeHtml(t.date || '—')}</td>` +
+      `<td style="padding:10px 8px;font-size:13px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(t.description || '')}">${escapeHtml(t.description || '—')}</td>` +
+      `<td style="padding:10px 8px;font-size:13px;color:rgba(255,255,255,0.75);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(t.vendor || '')}">${escapeHtml(t.vendor || '—')}</td>` +
+      `<td class="num" style="padding:10px 8px;font-size:13px;font-weight:600;color:${amountNum < 0 ? '#ef4444' : 'white'}">${escapeHtml(t.amountRaw || '—')}</td>` +
+      `<td style="padding:10px 8px;font-size:12px;color:var(--muted);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(t.account || '')}">${escapeHtml(t.account || '—')}</td>` +
+      `<td style="padding:10px 8px">${catBtn}</td>` +
+      `<td style="padding:10px 8px">${comBtn}</td>` +
+      '</tr>';
+  }
+
+  function sectionHeader(label, count, hint, color, total) {
+    return `<tr><td colspan="${cols.length}" style="padding:14px 8px 6px;background:rgba(255,255,255,0.02)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+        <div style="font-family:'Anton',sans-serif;font-size:13px;letter-spacing:1px;color:${color}">${label} · ${count}</div>
+        <div style="font-family:'Anton',sans-serif;font-size:13px;letter-spacing:0.5px;color:rgba(255,255,255,0.7)">${total != null ? pmtFmtK(total) : ''}</div>
+      </div>
+      ${hint ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${hint}</div>` : ''}
+    </td></tr>`;
+  }
+
+  function sumTx(arr) {
+    return arr.reduce((s, t) => {
+      const n = parseFloat(String(t.amountRaw).replace(/[^0-9.\-]/g, ''));
+      return s + (isNaN(n) ? 0 : Math.abs(n));
+    }, 0);
+  }
+
+  let html = '';
+  if (awaiting.length > 0) {
+    html += sectionHeader('AWAITING CLARIFICATION', awaiting.length, 'Pick a category from the chart of accounts — or leave a comment if none fits · click a row for full detail', 'var(--blue)', sumTx(awaiting));
+    for (const t of awaiting) html += renderTxRow(t);
+  }
+  if (clarified.length > 0) {
+    html += sectionHeader('CLARIFIED', clarified.length, 'Category or comment provided · waiting for bookkeeper to action and remove', 'var(--green)', sumTx(clarified));
+    for (const t of clarified) html += renderTxRow(t);
+  }
+  if (tx.length === 0) {
+    const err = (bk.meta && bk.meta.error) || 'No transactions awaiting clarification 🎉';
+    html = `<tr><td colspan="${cols.length}" style="padding:40px;text-align:center;color:var(--muted)">${escapeHtml(err)}</td></tr>`;
+  }
+  tbody.innerHTML = html;
+}
+
+function truncate(s, n) {
+  const v = String(s || '');
+  return v.length > n ? v.slice(0, n - 1) + '…' : v;
+}
+
+function updateTransactionsBadge(bk) {
+  const badge = document.getElementById('pmtTxBadge');
+  if (!badge) return;
+  const awaiting = (bk.transactions || []).filter(t => !t.cleared).length;
+  if (awaiting > 0) {
+    badge.style.display = 'inline-block';
+    badge.textContent = String(awaiting);
+    if (pmtMode !== 'transactions') badge.style.animation = 'pmt-ping 1.4s infinite';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// ── Outstanding Invoices summary (donut + Sent & Unpaid list) ───
+function renderOutstandingSummary(b) {
+  const outstanding = b.outstanding;
+  const outstandingTotal = outstanding.reduce((s, i) => s + (i.finalAmount || i.amount || 0), 0);
+  const overdueTotal     = b.overdue.reduce((s, i) => s + (i.finalAmount || i.amount || 0), 0);
+
+  setText('pmtOutstandingHead', pmtFmtK(outstandingTotal));
+  const headSub = document.getElementById('pmtOutstandingHeadSub');
+  if (headSub) {
+    const overdueText = b.overdue.length > 0
+      ? `${outstanding.length} sent, not yet collected · <span style="color:var(--red)">${pmtFmtK(overdueTotal)} overdue</span>`
+      : `${outstanding.length} sent, not yet collected`;
+    headSub.innerHTML = overdueText;
+  }
+
+  // Donut: segment by Service (Placement / Recruitment)
+  const placementTotal   = outstanding.filter(i => i.service === 'Placement').reduce((s, i) => s + (i.finalAmount || i.amount || 0), 0);
+  const recruitmentTotal = outstanding.filter(i => i.service === 'Recruitment').reduce((s, i) => s + (i.finalAmount || i.amount || 0), 0);
+  const otherTotal       = outstandingTotal - placementTotal - recruitmentTotal;
+
+  const donutEl = document.getElementById('pmtDonut');
+  if (donutEl) {
+    if (pmtDonutChart) { pmtDonutChart.destroy(); pmtDonutChart = null; }
+    if (outstandingTotal > 0) {
+      const segs = [];
+      const data = [];
+      const colors = [];
+      if (placementTotal   > 0) { segs.push('Placement');   data.push(placementTotal);   colors.push('#1390eb'); }
+      if (recruitmentTotal > 0) { segs.push('Recruitment'); data.push(recruitmentTotal); colors.push('#c084fc'); }
+      if (otherTotal       > 0) { segs.push('Other');       data.push(otherTotal);       colors.push('#f59e0b'); }
+      pmtDonutChart = new Chart(donutEl, {
+        type: 'doughnut',
+        data: { labels: segs, datasets: [{ data, backgroundColor: colors, borderWidth: 0, hoverOffset: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false }, datalabels: { display: false } } }
+      });
+    }
+    setText('pmtDonutCenter', pmtFmtK(outstandingTotal));
+    const legendEl = document.getElementById('pmtDonutLegend');
+    if (legendEl) {
+      const rows = [];
+      const fmtRow = (color, label, count, total, pct) =>
+        `<div style="display:flex;justify-content:space-between;margin-bottom:6px;gap:4px;align-items:baseline">
+           <span style="white-space:nowrap"><span style="display:inline-block;width:8px;height:8px;background:${color};border-radius:50%;margin-right:6px;vertical-align:middle"></span>${label} <span style="color:var(--muted)">(${count})</span></span>
+           <span style="white-space:nowrap"><b>${pmtFmtK(total)}</b> <span style="color:var(--muted);font-size:11px">${pct}%</span></span>
+         </div>`;
+      const denom = outstandingTotal || 1;
+      if (placementTotal > 0) {
+        const c = outstanding.filter(i => i.service === 'Placement').length;
+        rows.push(fmtRow('#1390eb', 'Placement', c, placementTotal, Math.round(placementTotal / denom * 100)));
       }
-
-      const statusPill = inv.approved
-        ? '<span style="background:rgba(19,144,235,0.18);color:#1390eb;font-size:10px;padding:3px 10px;border-radius:4px;text-transform:uppercase;letter-spacing:0.7px;font-weight:700">Ready to Send</span>'
-        : '<span style="background:rgba(192,132,252,0.18);color:#c084fc;font-size:10px;padding:3px 10px;border-radius:4px;text-transform:uppercase;letter-spacing:0.7px;font-weight:700">Client Review</span>';
-
-      const actions = inv.approved
-        ? '<button class="approve-btn" disabled style="background:rgba(34,197,94,0.18);color:#22c55e;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:default">✓ Approved</button>'
-        : `<button class="approve-btn" onclick="approveInvoice(${inv.rowNumber}, ${sourceAttr}, ${candidateAttr}, ${clientAttr}, this)" style="background:#1390eb;color:white;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">✓ Approve</button>`;
-
-      return '<tr style="border-bottom:1px solid rgba(255,255,255,0.04)">' +
-        `<td style="padding:10px 12px;font-size:11px;color:var(--muted);letter-spacing:0.6px;text-transform:uppercase">${escapeHtml(dateStr)}</td>` +
-        `<td style="padding:10px 12px;font-size:13px">${sourceBadge}${escapeHtml(inv.client)}</td>` +
-        `<td style="padding:10px 12px;font-size:13px;color:rgba(255,255,255,0.7)">${escapeHtml(inv.candidate)}</td>` +
-        `<td class="num" style="padding:10px 12px;font-size:13px;font-weight:600">${fmt0(amount)}</td>` +
-        `<td style="padding:10px 12px">${statusPill}</td>` +
-        `<td style="padding:10px 12px">${actions}</td>` +
-        '</tr>';
+      if (recruitmentTotal > 0) {
+        const c = outstanding.filter(i => i.service === 'Recruitment').length;
+        rows.push(fmtRow('#c084fc', 'Recruitment', c, recruitmentTotal, Math.round(recruitmentTotal / denom * 100)));
+      }
+      if (otherTotal > 0) {
+        const c = outstanding.filter(i => i.service !== 'Placement' && i.service !== 'Recruitment').length;
+        rows.push(fmtRow('#f59e0b', 'Other', c, otherTotal, Math.round(otherTotal / denom * 100)));
+      }
+      legendEl.innerHTML = rows.length ? rows.join('') : '<div style="color:var(--muted);font-size:12px">No outstanding invoices</div>';
     }
-
-    function sectionHeader(label, count, hint, color) {
-      const colspan = cols.length;
-      return `<tr><td colspan="${colspan}" style="padding:14px 12px 6px;background:rgba(255,255,255,0.02)">` +
-        `<div style="font-family:'Anton',sans-serif;font-size:13px;letter-spacing:1px;color:${color}">${label} · ${count}</div>` +
-        (hint ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${hint}</div>` : '') +
-        '</td></tr>';
-    }
-
-    let html = '';
-    if (awaitingReview.length > 0) {
-      html += sectionHeader('Awaiting your review', awaitingReview.length, 'Approve to release for sending · edit notes if anything needs changing', 'var(--blue)');
-      for (const inv of awaitingReview) html += renderPipeRow(inv);
-    }
-    if (readyToSend.length > 0) {
-      html += sectionHeader('Ready to send', readyToSend.length, 'Approved · queued for the bookkeeping team', 'var(--green)');
-      for (const inv of readyToSend) html += renderPipeRow(inv);
-    }
-    if (pipeline.length === 0) {
-      const errMsg = (RECEIVABLES.meta && RECEIVABLES.meta.error) || 'No upcoming invoices.';
-      html = `<tr><td colspan="${cols.length}" style="padding:40px;text-align:center;color:var(--muted)">${escapeHtml(errMsg)}</td></tr>`;
-    }
-    tbody.innerHTML = html;
   }
 
-  // ── Outstanding table + Donut ────────────────
-  const outTbl = document.getElementById('cfOutstandingTbl');
-  if (outTbl) {
-    const tbody = outTbl.querySelector('tbody');
+  // Sent & Unpaid list (sorted: overdue first, then by due date)
+  const tbl = document.getElementById('pmtOutstandingTbl');
+  if (tbl) {
+    const tbody = tbl.querySelector('tbody');
     if (outstanding.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" style="padding:30px;text-align:center;color:var(--muted)">Nothing outstanding 🎉</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="padding:30px;text-align:center;color:var(--muted)">Nothing outstanding 🎉</td></tr>';
     } else {
-      // Sort by overdue first, then by date oldest first
-      const sorted = outstanding.slice().sort((a, b) => {
-        if (a.sentState === 'overdue' && b.sentState !== 'overdue') return -1;
-        if (b.sentState === 'overdue' && a.sentState !== 'overdue') return 1;
-        const da = parseDDMMYYYY(a.invoiceDate);
-        const db = parseDDMMYYYY(b.invoiceDate);
+      const today = new Date();
+      const sorted = outstanding.slice().sort((a, b2) => {
+        const ao = a._effectiveState === 'overdue', bo = b2._effectiveState === 'overdue';
+        if (ao && !bo) return -1;
+        if (bo && !ao) return 1;
+        const da = parseDDMMYYYY(a.dueDate || a.invoiceDate);
+        const db = parseDDMMYYYY(b2.dueDate || b2.invoiceDate);
         return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
       });
-      const maxAge = sorted.reduce((m, i) => {
-        const dt = parseDDMMYYYY(i.invoiceDate);
-        const age = dt ? Math.floor((today - dt) / 86400000) : 0;
-        return Math.max(m, age);
-      }, 1);
       tbody.innerHTML = sorted.map(inv => {
-        const dt = parseDDMMYYYY(inv.invoiceDate);
-        const age = dt ? Math.floor((today - dt) / 86400000) : 0;
-        const dueStr = dt ? `${dt.toLocaleString('en-US', { month: 'short' })} ${dt.getDate()}` : '—';
-        const ageColor = age > 60 ? 'var(--red)' : age > 30 ? 'var(--amber)' : 'var(--muted)';
-        const barColor = age > 60 ? 'var(--red)' : age > 30 ? 'var(--amber)' : 'rgba(255,255,255,0.15)';
-        const barWidth = Math.min(100, (age / maxAge) * 100);
-        const cellEllipsis = 'overflow:hidden;white-space:nowrap;text-overflow:ellipsis';
-        const clientShort = inv.client || '—';
-        const candidateShort = inv.candidate || '';
-        const sourceBadge = inv.source === 'client'
-          ? '<span style="display:inline-block;font-size:8px;padding:1px 5px;border-radius:3px;background:rgba(19,144,235,0.15);color:#1390eb;text-transform:uppercase;letter-spacing:0.4px;font-weight:700;margin-right:5px;vertical-align:middle">C</span>'
-          : '<span style="display:inline-block;font-size:8px;padding:1px 5px;border-radius:3px;background:rgba(192,132,252,0.15);color:#c084fc;text-transform:uppercase;letter-spacing:0.4px;font-weight:700;margin-right:5px;vertical-align:middle">P</span>';
-        // For client rows, prefer dueDate over invoiceDate for the "Due" column
-        const dueDtClient = inv.dueDate ? parseDDMMYYYY(inv.dueDate) : null;
-        const dueDispDt = dueDtClient || dt;
-        const dueDispStr = dueDispDt ? `${dueDispDt.toLocaleString('en-US', { month: 'short' })} ${dueDispDt.getDate()}` : '—';
-        return '<tr style="border-bottom:1px solid rgba(255,255,255,0.04)">' +
-          `<td style="padding:8px 8px;${cellEllipsis}" title="${escapeHtml(clientShort + ' — ' + candidateShort)}">` +
-            `<div style="font-size:12px;${cellEllipsis}">${sourceBadge}${escapeHtml(clientShort)}</div>` +
-            `<div style="font-size:11px;color:rgba(255,255,255,0.55);${cellEllipsis}">${escapeHtml(candidateShort)}</div>` +
-          `</td>` +
-          `<td class="num" style="padding:8px 8px;font-size:12px;font-weight:600">${fmt0(invoiceAmount(inv))}</td>` +
-          `<td class="num" style="padding:8px 8px;font-size:11px;color:var(--muted)">${escapeHtml(dueDispStr)}</td>` +
-          `<td style="padding:8px 8px"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:${ageColor};min-width:26px;flex-shrink:0">${age}d</span><div style="flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden;min-width:20px"><div style="height:100%;background:${barColor};width:${barWidth}%"></div></div></div></td>` +
+        const dueDt = parseDDMMYYYY(inv.dueDate);
+        const dueStr = dueDt ? `${dueDt.toLocaleString('en-US', { month: 'short' })} ${dueDt.getDate()}` : '—';
+        let daysCell = '<span style="color:var(--muted)">—</span>';
+        if (dueDt) {
+          const diff = Math.floor((today - dueDt) / 86400000);
+          if (diff > 0) daysCell = `<span style="color:var(--red);font-weight:600">${diff}d</span>`;
+          else if (diff === 0) daysCell = `<span style="color:var(--amber);font-weight:600">today</span>`;
+          else daysCell = `<span style="color:var(--muted)">—</span>`;
+        }
+        const serviceShort = inv.service || '—';
+        return `<tr class="pmt-row" onclick="openInvoiceDetail(${inv.rowNumber})">` +
+          `<td style="padding:8px 6px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px" title="${escapeHtml(inv.client || '')}">${escapeHtml(inv.client || '—')}</td>` +
+          `<td style="padding:8px 6px;font-size:12px;color:rgba(255,255,255,0.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px" title="${escapeHtml(serviceShort)}">${escapeHtml(serviceShort)}</td>` +
+          `<td class="num" style="padding:8px 6px;font-size:12px;font-weight:700">${pmtFmtK(inv.finalAmount || inv.amount || 0)}</td>` +
+          `<td class="num" style="padding:8px 6px;font-size:11px;color:var(--muted);white-space:nowrap">${escapeHtml(dueStr)}</td>` +
+          `<td class="num" style="padding:8px 6px;font-size:11px;white-space:nowrap">${daysCell}</td>` +
           '</tr>';
       }).join('');
     }
   }
+}
 
-  // Donut chart: Unpaid vs Partially Paid (placeholder: assume all outstanding is fully unpaid)
-  const donutEl = document.getElementById('cfDonut');
-  if (donutEl) {
-    if (cfDonutChart) { cfDonutChart.destroy(); cfDonutChart = null; }
-    const unpaidTotal = outstandingTotal; // all outstanding treated as unpaid for now
-    const partialTotal = 0;
-    const total = unpaidTotal + partialTotal;
-    const partialPct = total > 0 ? (partialTotal / total * 100).toFixed(0) : 0;
-    const unpaidPct = total > 0 ? (100 - partialPct) : 0;
-    cfDonutChart = new Chart(donutEl, {
-      type: 'doughnut',
-      data: {
-        labels: ['Unpaid','Partially Paid'],
-        datasets: [{
-          data: [unpaidTotal, partialTotal],
-          backgroundColor: ['#f59e0b','#fde047'],
-          borderWidth: 0,
-          hoverOffset: 4
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false, cutout: '70%',
-        plugins: { legend: { display: false }, datalabels: { display: false } }
-      }
+// ── AR by client × month grid ───────────────────────────────────
+function renderArGrid(invoices) {
+  const tbl = document.getElementById('pmtArGrid');
+  if (!tbl) return;
+  const thead = tbl.querySelector('thead');
+  const tbody = tbl.querySelector('tbody');
+
+  const statusFilter = (document.getElementById('pmtArStatus') || {}).value || '';
+  const searchTerm = ((document.getElementById('pmtArSearch') || {}).value || '').toLowerCase().trim();
+
+  // Collect month columns from the 4 most recent months that have data + lookahead
+  const monthSet = new Set();
+  for (const inv of invoices) {
+    const k = pmtMonthYearKey(inv.dueDate || inv.invoiceDate);
+    if (k) monthSet.add(k);
+  }
+  const months = Array.from(monthSet).sort();
+  if (months.length === 0) {
+    thead.innerHTML = '';
+    tbody.innerHTML = '<tr><td style="padding:40px;text-align:center;color:var(--muted)">No invoice data with dates to bucket.</td></tr>';
+    return;
+  }
+
+  // Bucket invoices by client × month
+  const byClient = {};   // client → { months: { key: { total, status, count, adjustments } }, total, openTotal }
+  for (const inv of invoices) {
+    if (statusFilter && inv._effectiveState !== statusFilter) continue;
+    const name = inv.client || inv.candidate || '—';
+    if (searchTerm && !name.toLowerCase().includes(searchTerm)) continue;
+    const k = pmtMonthYearKey(inv.dueDate || inv.invoiceDate);
+    if (!k) continue;
+    if (!byClient[name]) byClient[name] = { months: {}, total: 0, openTotal: 0, currency: inv.currency || 'USD', source: inv.service || '' };
+    const c = byClient[name];
+    if (!c.months[k]) c.months[k] = { total: 0, count: 0, statusRank: 0, hasAdjust: false };
+    const cell = c.months[k];
+    const amt = (inv.finalAmount || inv.amount || 0);
+    cell.total += amt;
+    cell.count += 1;
+    if (inv.deposit || inv.commission && parseFloat(inv.commission) !== 0) cell.hasAdjust = true;
+    // status rank: paid=1, sent=2, overdue=3, pipeline=0 — keep the WORST
+    const rank = { paid: 1, sent: 2, overdue: 3, pipeline: 0 }[inv._effectiveState || 'pipeline'] || 0;
+    if (rank > cell.statusRank) cell.statusRank = rank;
+    c.total += amt;
+    if (inv._effectiveState === 'sent' || inv._effectiveState === 'overdue') c.openTotal += amt;
+  }
+
+  const clients = Object.keys(byClient).sort((a, b) => byClient[b].total - byClient[a].total);
+  if (clients.length === 0) {
+    thead.innerHTML = '';
+    tbody.innerHTML = '<tr><td style="padding:40px;text-align:center;color:var(--muted)">No invoices match the current filter.</td></tr>';
+    return;
+  }
+
+  // Limit to last 12 month columns to keep the grid readable
+  const visibleMonths = months.slice(-12);
+
+  thead.innerHTML = '<tr>' +
+    '<th style="text-align:left;padding:10px 12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;white-space:nowrap">Client</th>' +
+    visibleMonths.map(m => `<th style="text-align:right;padding:10px 12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;white-space:nowrap">${pmtMonthLabel(m)}</th>`).join('') +
+    '<th style="text-align:right;padding:10px 12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;white-space:nowrap">Total</th>' +
+    '</tr>';
+
+  function cellStyle(cell) {
+    if (!cell) return 'background:rgba(255,255,255,0.02);';
+    const rank = cell.statusRank;
+    // paid → green; sent → blue; overdue → red; pipeline → muted
+    const palette = {
+      0: 'background:rgba(192,132,252,0.10);border:1px solid rgba(192,132,252,0.25);color:#c084fc;',
+      1: 'background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.30);color:#86efac;',
+      2: 'background:rgba(19,144,235,0.12);border:1px solid rgba(19,144,235,0.30);color:#7dd3fc;',
+      3: 'background:rgba(239,68,68,0.14);border:1px solid rgba(239,68,68,0.35);color:#fca5a5;'
+    };
+    return palette[rank] || palette[0];
+  }
+
+  tbody.innerHTML = clients.map(name => {
+    const c = byClient[name];
+    const cells = visibleMonths.map(m => {
+      const cell = c.months[m];
+      if (!cell) return `<td style="padding:14px 12px;border-radius:8px;background:rgba(255,255,255,0.02);text-align:right;font-size:13px;color:rgba(255,255,255,0.25);white-space:nowrap">—</td>`;
+      const adj = cell.hasAdjust ? '<span style="position:absolute;top:6px;left:8px;font-size:9px;opacity:0.7">△</span>' : '';
+      const countTag = cell.count > 1 ? `<span style="position:absolute;top:6px;left:8px;font-size:9px;background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;letter-spacing:0.5px">×${cell.count}</span>` : adj;
+      return `<td style="position:relative;padding:14px 12px;border-radius:8px;${cellStyle(cell)};text-align:right;font-size:13px;font-weight:700;white-space:nowrap">${countTag}${pmtFmtK(cell.total)}</td>`;
+    }).join('');
+    const totalLabel = c.openTotal > 0
+      ? `<div style="font-family:'Anton',sans-serif;font-size:14px;letter-spacing:0.5px">${pmtFmtK(c.total)}</div><div style="font-size:10px;color:var(--amber)">${pmtFmtK(c.openTotal)} open</div>`
+      : `<div style="font-family:'Anton',sans-serif;font-size:14px;letter-spacing:0.5px">${pmtFmtK(c.total)}</div>`;
+    return `<tr>
+      <td style="padding:10px 12px;font-size:13px;white-space:nowrap"><div>${escapeHtml(name)}</div><div style="font-size:10px;color:var(--muted)">${escapeHtml(c.source || '')} · ${escapeHtml(c.currency)}</div></td>
+      ${cells}
+      <td style="padding:10px 12px;text-align:right">${totalLabel}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Popovers
+// ═══════════════════════════════════════════════════════════════════
+function positionPopover(popEl, anchorEl) {
+  if (!popEl || !anchorEl) return;
+  const rect = anchorEl.getBoundingClientRect();
+  const popW = popEl.offsetWidth || 260;
+  const popH = popEl.offsetHeight || 200;
+  let left = rect.left + window.scrollX;
+  let top  = rect.bottom + window.scrollY + 6;
+  // Flip if would overflow right edge
+  if (left + popW > window.innerWidth - 12) left = Math.max(12, window.innerWidth - popW - 12);
+  // Flip up if would overflow bottom
+  if (top + popH > window.innerHeight + window.scrollY - 12) {
+    top = rect.top + window.scrollY - popH - 6;
+  }
+  popEl.style.left = left + 'px';
+  popEl.style.top  = top + 'px';
+}
+
+// Status popover
+const PMT_STATUS_OPTIONS = ['In Progress','AgenCFO Review','Client Review','Ready','Unpaid','Partially Paid','Fully Paid'];
+function openStatusPopover(anchor, rowNumber, candidate, client, currentStatus) {
+  pmtStatusPopState = { rowNumber, candidate, client, currentStatus, selected: currentStatus };
+  const pop = document.getElementById('pmtStatusPop');
+  if (!pop) return;
+  const subject = document.getElementById('pmtStatusPopSubject');
+  if (subject) subject.textContent = client || candidate || '';
+  const opts = document.getElementById('pmtStatusPopOptions');
+  if (opts) {
+    opts.innerHTML = PMT_STATUS_OPTIONS.map(s => {
+      const checked = (currentStatus || '').toLowerCase() === s.toLowerCase();
+      return `<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px;${checked ? 'background:rgba(19,144,235,0.10);color:#7dd3fc' : 'color:rgba(255,255,255,0.85)'}" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='${checked ? 'rgba(19,144,235,0.10)' : 'transparent'}'">
+        <input type="radio" name="pmtStatusOpt" value="${escapeHtml(s)}"${checked ? ' checked' : ''} onchange="pmtStatusPopState && (pmtStatusPopState.selected = this.value)" style="accent-color:#1390eb"/>
+        <span>${s}</span>
+      </label>`;
+    }).join('');
+  }
+  pop.style.display = 'block';
+  positionPopover(pop, anchor);
+}
+function closeStatusPopover() {
+  const pop = document.getElementById('pmtStatusPop');
+  if (pop) pop.style.display = 'none';
+  pmtStatusPopState = null;
+}
+async function saveStatusFromPopover() {
+  const s = pmtStatusPopState;
+  if (!s || !s.selected) { closeStatusPopover(); return; }
+  const btn = document.getElementById('pmtStatusSaveBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const res = await fetch('/api/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rowNumber: s.rowNumber, status: s.selected, verify: { candidate: s.candidate, client: s.client } })
     });
-    setText('cfDonutCenter', fmtK(total));
-    const legendEl = document.getElementById('cfDonutLegend');
-    if (legendEl) {
-      legendEl.innerHTML =
-        `<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span><span style="display:inline-block;width:8px;height:8px;background:#f59e0b;border-radius:50%;margin-right:6px"></span>Unpaid <span style="color:var(--muted)">(${outstanding.length})</span></span><span><b>${fmtK(unpaidTotal)}</b> <span style="color:var(--muted);font-size:11px">${unpaidPct}%</span></span></div>` +
-        `<div style="display:flex;justify-content:space-between"><span><span style="display:inline-block;width:8px;height:8px;background:#fde047;border-radius:50%;margin-right:6px"></span>Partially Paid <span style="color:var(--muted)">(0)</span></span><span><b>${fmtK(partialTotal)}</b> <span style="color:var(--muted);font-size:11px">${partialPct}%</span></span></div>`;
-    }
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
+    closeStatusPopover();
+    setTimeout(() => forceReloadData && forceReloadData(), 400);
+  } catch (e) {
+    console.error('Status save failed:', e);
+    alert('Status save failed: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
   }
 }
 
-// ── Approve / Note write-back handlers ─────────
-async function approveInvoice(rowNumber, source, candidate, client, btnEl) {
+// Category popover
+function openCategoryPopover(anchor, rowNumber, vendor, description, currentCat) {
+  pmtCategoryPopState = { rowNumber, vendor, description, currentCat, selected: currentCat };
+  const pop = document.getElementById('pmtCategoryPop');
+  if (!pop) return;
+  populateCategoryOptions('');
+  const search = document.getElementById('pmtCategorySearch');
+  if (search) search.value = '';
+  pop.style.display = 'block';
+  positionPopover(pop, anchor);
+}
+function populateCategoryOptions(filter) {
+  const wrap = document.getElementById('pmtCategoryOptions');
+  if (!wrap) return;
+  const bk = (typeof BOOKKEEPING !== 'undefined' && BOOKKEEPING) || { coa: [] };
+  const f = (filter || '').toLowerCase();
+  const all = ['', ...bk.coa];   // first option = clear
+  const filtered = all.filter(c => !f || c.toLowerCase().includes(f));
+  wrap.innerHTML = filtered.map(c => {
+    const isClear = c === '';
+    const label = isClear ? '— Clear category —' : escapeHtml(c);
+    return `<button onclick="pickCategory(${JSON.stringify(c).replace(/"/g, '&quot;')})"
+      style="text-align:left;background:transparent;color:${isClear ? 'var(--muted)' : 'rgba(255,255,255,0.9)'};border:none;padding:6px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit"
+      onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">${label}</button>`;
+  }).join('') || '<div style="padding:8px;color:var(--muted);font-size:12px">No matches</div>';
+}
+function filterCategoryOptions() {
+  const search = document.getElementById('pmtCategorySearch');
+  populateCategoryOptions(search ? search.value : '');
+}
+async function pickCategory(category) {
+  const s = pmtCategoryPopState;
+  if (!s) return;
+  try {
+    const res = await fetch('/api/category', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rowNumber: s.rowNumber, category, verify: { vendor: s.vendor, description: s.description } })
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
+    closeCategoryPopover();
+    setTimeout(() => forceReloadData && forceReloadData(), 400);
+  } catch (e) {
+    console.error('Category save failed:', e);
+    alert('Category save failed: ' + e.message);
+  }
+}
+function closeCategoryPopover() {
+  const pop = document.getElementById('pmtCategoryPop');
+  if (pop) pop.style.display = 'none';
+  pmtCategoryPopState = null;
+}
+
+// Comment popover
+function openCommentPopover(anchor, rowNumber, vendor, description, currentComment) {
+  pmtCommentPopState = { rowNumber, vendor, description };
+  const pop = document.getElementById('pmtCommentPop');
+  if (!pop) return;
+  const subject = document.getElementById('pmtCommentPopSubject');
+  if (subject) subject.textContent = (description || vendor || '');
+  const ta = document.getElementById('pmtCommentText');
+  if (ta) ta.value = currentComment || '';
+  pop.style.display = 'block';
+  positionPopover(pop, anchor);
+  if (ta) ta.focus();
+}
+function closeCommentPopover() {
+  const pop = document.getElementById('pmtCommentPop');
+  if (pop) pop.style.display = 'none';
+  pmtCommentPopState = null;
+}
+async function saveCommentFromPopover() {
+  const s = pmtCommentPopState;
+  if (!s) { closeCommentPopover(); return; }
+  const ta = document.getElementById('pmtCommentText');
+  const comment = ta ? ta.value : '';
+  const btn = document.getElementById('pmtCommentSaveBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const res = await fetch('/api/comment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rowNumber: s.rowNumber, comment, verify: { vendor: s.vendor, description: s.description } })
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
+    closeCommentPopover();
+    setTimeout(() => forceReloadData && forceReloadData(), 400);
+  } catch (e) {
+    console.error('Comment save failed:', e);
+    alert('Comment save failed: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
+  }
+}
+
+// Note popover (reuses comment popover UI but writes to Invoicing notes via /api/note)
+let pmtNotePopState = null;
+function openNotePopoverFromInvoice(anchor, rowNumber, candidate, client, currentNote) {
+  pmtNotePopState = { rowNumber, candidate, client };
+  // Reuse comment popover DOM
+  const pop = document.getElementById('pmtCommentPop');
+  if (!pop) return;
+  const subject = document.getElementById('pmtCommentPopSubject');
+  if (subject) subject.textContent = (client || candidate || '') + ' · note';
+  const ta = document.getElementById('pmtCommentText');
+  if (ta) ta.value = currentNote || '';
+  const save = document.getElementById('pmtCommentSaveBtn');
+  if (save) save.onclick = saveNoteFromPopover;
+  pop.style.display = 'block';
+  positionPopover(pop, anchor);
+  if (ta) ta.focus();
+}
+async function saveNoteFromPopover() {
+  const s = pmtNotePopState;
+  if (!s) { closeCommentPopover(); return; }
+  const ta = document.getElementById('pmtCommentText');
+  const note = ta ? ta.value : '';
+  const btn = document.getElementById('pmtCommentSaveBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const res = await fetch('/api/note', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rowNumber: s.rowNumber, note, verify: { candidate: s.candidate, client: s.client } })
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
+    // Restore comment popover handler for next open
+    if (btn) btn.onclick = saveCommentFromPopover;
+    pmtNotePopState = null;
+    closeCommentPopover();
+    setTimeout(() => forceReloadData && forceReloadData(), 400);
+  } catch (e) {
+    console.error('Note save failed:', e);
+    alert('Note save failed: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
+  }
+}
+
+// Detail popover (row click — invoice or transaction)
+function openInvoiceDetail(rowNumber) {
+  const inv = (RECEIVABLES.invoices || []).find(i => i.rowNumber === rowNumber);
+  if (!inv) return;
+  const pop = document.getElementById('pmtDetailPop');
+  if (!pop) return;
+  setText('pmtDetailEyebrow', (inv.service || 'Invoice') + ' · #' + (inv.invoiceNum || rowNumber));
+  setText('pmtDetailTitle', (inv.client || inv.candidate || '—'));
+  const body = document.getElementById('pmtDetailBody');
+  const rows = [
+    ['Candidate',       inv.candidate],
+    ['Job title',       inv.jobTitle],
+    ['Service',         inv.service],
+    ['Invoice date',    inv.invoiceDate],
+    ['Due date',        inv.dueDate],
+    ['Date paid',       inv.datePaid],
+    ['Placed salary',   inv.placedSalary ? pmtFmt0(inv.placedSalary) + ' / mo' : ''],
+    ['Commission',      inv.commission],
+    ['Deposit',         inv.deposit ? pmtFmt0(inv.deposit) : ''],
+    ['Final amount',    inv.finalAmount ? pmtFmt0(inv.finalAmount) : ''],
+    ['Currency',        inv.currency],
+    ['Status',          inv.statusRaw],
+    ['Approved',        inv.approved ? '✓ yes' : '✗ not yet'],
+    ['Sent',            inv.sent ? '✓ yes' : '✗ not yet'],
+    ['Billing address', inv.billingAddress],
+    ['Notes',           inv.notes]
+  ];
+  if (body) {
+    body.innerHTML = rows
+      .filter(([_, v]) => v != null && String(v).trim() !== '')
+      .map(([k, v]) => `<div style="display:flex;justify-content:space-between;gap:14px;padding:4px 0;border-bottom:1px dashed rgba(255,255,255,0.06)">
+          <span style="color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-size:10px;white-space:nowrap;flex-shrink:0">${k}</span>
+          <span style="color:rgba(255,255,255,0.95);text-align:right;font-size:12px">${escapeHtml(String(v))}</span>
+        </div>`).join('');
+  }
+  pop.style.display = 'block';
+  // Center
+  pop.style.left = Math.max(12, (window.innerWidth - pop.offsetWidth) / 2) + 'px';
+  pop.style.top  = Math.max(12, window.scrollY + (window.innerHeight - pop.offsetHeight) / 2) + 'px';
+}
+function openTransactionDetail(rowNumber) {
+  const bk = (typeof BOOKKEEPING !== 'undefined' && BOOKKEEPING) || { transactions: [] };
+  const t = (bk.transactions || []).find(x => x.rowNumber === rowNumber);
+  if (!t) return;
+  const pop = document.getElementById('pmtDetailPop');
+  if (!pop) return;
+  setText('pmtDetailEyebrow', 'Transaction · row ' + rowNumber);
+  setText('pmtDetailTitle', t.description || t.vendor || '—');
+  const body = document.getElementById('pmtDetailBody');
+  const rows = [
+    ['Date',        t.date],
+    ['Vendor',      t.vendor],
+    ['Description', t.description],
+    ['Amount',      t.amountRaw],
+    ['Account',     t.account],
+    ['Category',    t.category],
+    ['Comment',     t.comment]
+  ];
+  // Extra unclassified bookkeeper columns
+  for (const k of Object.keys(t.raw || {})) {
+    rows.push([k, t.raw[k]]);
+  }
+  if (body) {
+    body.innerHTML = rows
+      .filter(([_, v]) => v != null && String(v).trim() !== '')
+      .map(([k, v]) => `<div style="display:flex;justify-content:space-between;gap:14px;padding:4px 0;border-bottom:1px dashed rgba(255,255,255,0.06)">
+          <span style="color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-size:10px;white-space:nowrap;flex-shrink:0">${k}</span>
+          <span style="color:rgba(255,255,255,0.95);text-align:right;font-size:12px">${escapeHtml(String(v))}</span>
+        </div>`).join('');
+  }
+  pop.style.display = 'block';
+  pop.style.left = Math.max(12, (window.innerWidth - pop.offsetWidth) / 2) + 'px';
+  pop.style.top  = Math.max(12, window.scrollY + (window.innerHeight - pop.offsetHeight) / 2) + 'px';
+}
+function closeDetailPopover() {
+  const pop = document.getElementById('pmtDetailPop');
+  if (pop) pop.style.display = 'none';
+}
+
+// Close popovers when clicking outside
+document.addEventListener('click', (e) => {
+  const pops = ['pmtStatusPop', 'pmtCategoryPop', 'pmtCommentPop', 'pmtDetailPop'];
+  for (const id of pops) {
+    const pop = document.getElementById(id);
+    if (pop && pop.style.display === 'block' && !pop.contains(e.target)) {
+      // ignore if click came from an opener button (handled by stopPropagation in those onclicks)
+      pop.style.display = 'none';
+    }
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// Write-back: Approve / Note (Status, Category, Comment handled via popovers)
+// ═══════════════════════════════════════════════════════════════════
+async function approveInvoice(rowNumber, candidate, client, btnEl) {
   if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Approving…'; }
   try {
     const res = await fetch('/api/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rowNumber, source, verify: { candidate, client } })
+      body: JSON.stringify({ rowNumber, verify: { candidate, client } })
     });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
-    // Refresh data from the server
     if (btnEl) btnEl.textContent = '✓ Approved';
-    setTimeout(() => forceReloadData && forceReloadData(), 600);
+    setTimeout(() => forceReloadData && forceReloadData(), 500);
   } catch (e) {
     console.error('Approve failed:', e);
     if (btnEl) { btnEl.disabled = false; btnEl.textContent = '✗ Retry'; btnEl.style.background = '#ef4444'; }
@@ -2225,14 +2938,14 @@ async function approveInvoice(rowNumber, source, candidate, client, btnEl) {
   }
 }
 
-let noteSaveTimer = null;
-async function saveNote(rowNumber, source, candidate, client, note, inputEl) {
+// Legacy shim — older code paths may still call saveNote(...).
+async function saveNote(rowNumber, _sourceIgnored, candidate, client, note, inputEl) {
   if (inputEl) inputEl.style.borderColor = 'rgba(245,158,11,0.6)';
   try {
     const res = await fetch('/api/note', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rowNumber, source, note, verify: { candidate, client } })
+      body: JSON.stringify({ rowNumber, note, verify: { candidate, client } })
     });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
@@ -2245,6 +2958,7 @@ async function saveNote(rowNumber, source, candidate, client, note, inputEl) {
     if (inputEl) inputEl.style.borderColor = 'var(--red)';
   }
 }
+
 
 function rebuildFilterDropdowns() {
   const lastIdx = MONTHS.length - 1;
