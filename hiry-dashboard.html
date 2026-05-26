@@ -2577,10 +2577,19 @@ function renderArGrid(invoices) {
   // Limit to last 12 month columns to keep the grid readable
   const visibleMonths = months.slice(-12);
 
+  // Sticky-column background — solid enough that scrolling cells underneath
+  // don't bleed through. Matches the panel surface tone.
+  const STICKY_BG = '#0b1422';
+  const stickyLeftStyle  = `position:sticky;left:0;background:${STICKY_BG};z-index:3;`;
+  const stickyRightStyle = `position:sticky;right:0;background:${STICKY_BG};z-index:3;`;
+  // Header cells need a higher z-index so they sit over body cells when scrolled.
+  const stickyLeftHead  = stickyLeftStyle  + 'z-index:4;';
+  const stickyRightHead = stickyRightStyle + 'z-index:4;';
+
   thead.innerHTML = '<tr>' +
-    '<th style="text-align:left;padding:10px 12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;white-space:nowrap">Client</th>' +
+    `<th style="text-align:left;padding:10px 12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;white-space:nowrap;${stickyLeftHead}">Client</th>` +
     visibleMonths.map(m => `<th style="text-align:right;padding:10px 12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;white-space:nowrap">${pmtMonthLabel(m)}</th>`).join('') +
-    '<th style="text-align:right;padding:10px 12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;white-space:nowrap">Total</th>' +
+    `<th style="text-align:right;padding:10px 12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;white-space:nowrap;${stickyRightHead}">Total</th>` +
     '</tr>';
 
   function cellStyle(cell) {
@@ -2598,22 +2607,75 @@ function renderArGrid(invoices) {
 
   tbody.innerHTML = clients.map(name => {
     const c = byClient[name];
+    const nameAttr = JSON.stringify(name).replace(/"/g, '&quot;');
     const cells = visibleMonths.map(m => {
       const cell = c.months[m];
-      if (!cell) return `<td style="padding:14px 12px;border-radius:8px;background:rgba(255,255,255,0.02);text-align:right;font-size:13px;color:rgba(255,255,255,0.25);white-space:nowrap">—</td>`;
+      const monthAttr = JSON.stringify(m).replace(/"/g, '&quot;');
+      if (!cell) {
+        // Empty cells aren't clickable — there's nothing behind them.
+        return `<td style="padding:14px 12px;border-radius:8px;background:rgba(255,255,255,0.02);text-align:right;font-size:13px;color:rgba(255,255,255,0.25);white-space:nowrap">—</td>`;
+      }
       const adj = cell.hasAdjust ? '<span style="position:absolute;top:6px;left:8px;font-size:9px;opacity:0.7">△</span>' : '';
       const countTag = cell.count > 1 ? `<span style="position:absolute;top:6px;left:8px;font-size:9px;background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;letter-spacing:0.5px">×${cell.count}</span>` : adj;
-      return `<td style="position:relative;padding:14px 12px;border-radius:8px;${cellStyle(cell)};text-align:right;font-size:13px;font-weight:700;white-space:nowrap">${countTag}${pmtFmtK(cell.total)}</td>`;
+      return `<td onclick="openArCellDetail(${nameAttr}, ${monthAttr})" style="position:relative;padding:14px 12px;border-radius:8px;${cellStyle(cell)};text-align:right;font-size:13px;font-weight:700;white-space:nowrap;cursor:pointer;transition:filter 0.12s" onmouseover="this.style.filter='brightness(1.2)'" onmouseout="this.style.filter='none'">${countTag}${pmtFmtK(cell.total)}</td>`;
     }).join('');
     const totalLabel = c.openTotal > 0
       ? `<div style="font-family:'Anton',sans-serif;font-size:14px;letter-spacing:0.5px">${pmtFmtK(c.total)}</div><div style="font-size:10px;color:var(--amber)">${pmtFmtK(c.openTotal)} open</div>`
       : `<div style="font-family:'Anton',sans-serif;font-size:14px;letter-spacing:0.5px">${pmtFmtK(c.total)}</div>`;
     return `<tr>
-      <td style="padding:10px 12px;font-size:13px;white-space:nowrap"><div>${escapeHtml(name)}</div><div style="font-size:10px;color:var(--muted)">${escapeHtml(c.source || '')} · ${escapeHtml(c.currency)}</div></td>
+      <td style="padding:10px 12px;font-size:13px;white-space:nowrap;${stickyLeftStyle}"><div>${escapeHtml(name)}</div><div style="font-size:10px;color:var(--muted)">${escapeHtml(c.source || '')} · ${escapeHtml(c.currency)}</div></td>
       ${cells}
-      <td style="padding:10px 12px;text-align:right">${totalLabel}</td>
+      <td style="padding:10px 12px;text-align:right;${stickyRightStyle}">${totalLabel}</td>
     </tr>`;
   }).join('');
+}
+
+// AR grid cell drilldown — shows the invoices behind a specific client × month
+// bucket. Re-uses the pmtDetailPop popover, but renders a list of invoices
+// instead of a single invoice's field dump. Clicking any list item closes
+// this view and opens that invoice's full detail.
+function openArCellDetail(clientName, monthKey) {
+  const matching = ((typeof RECEIVABLES !== 'undefined' && RECEIVABLES.invoices) || []).filter(inv => {
+    const name = inv.client || inv.candidate || '—';
+    if (name !== clientName) return false;
+    return pmtMonthYearKey(inv.dueDate || inv.invoiceDate) === monthKey;
+  });
+  const pop = document.getElementById('pmtDetailPop');
+  if (!pop) return;
+  const total = matching.reduce((s, i) => s + (i.finalAmount || i.amount || 0), 0);
+  setText('pmtDetailEyebrow', clientName + ' · ' + pmtMonthLabel(monthKey));
+  setText('pmtDetailTitle', matching.length + ' invoice' + (matching.length === 1 ? '' : 's') + ' · ' + pmtFmtK(total));
+  const body = document.getElementById('pmtDetailBody');
+  if (body) {
+    if (matching.length === 0) {
+      body.innerHTML = '<div style="color:var(--muted);padding:8px 4px;font-size:12px">No invoices in this bucket.</div>';
+    } else {
+      body.innerHTML = matching.map(inv => {
+        const pill = renderStatusPill(inv);
+        const candAttr = JSON.stringify(inv.candidate).replace(/"/g, '&quot;');
+        const cliAttr  = JSON.stringify(inv.client).replace(/"/g, '&quot;');
+        const approveBtn = inv.approved
+          ? '<span class="pmt-status-pill" style="background:rgba(34,197,94,0.18);color:#22c55e;margin-left:6px">✓</span>'
+          : `<button class="pmt-cta" style="margin-left:6px;padding:3px 8px;font-size:9px" onclick="event.stopPropagation();approveInvoice(${inv.rowNumber}, ${candAttr}, ${cliAttr}, this)">✓ Approve</button>`;
+        const subtitle = [inv.service, inv.candidate].filter(Boolean).join(' · ');
+        return `<div onclick="closeDetailPopover();setTimeout(function(){openInvoiceDetail(${inv.rowNumber})},80)"
+          style="display:flex;justify-content:space-between;gap:10px;padding:10px 8px;border-bottom:1px dashed rgba(255,255,255,0.06);cursor:pointer;border-radius:4px;transition:background 0.12s"
+          onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='transparent'">
+          <div style="min-width:0;flex:1">
+            <div style="font-size:13px;color:white;font-weight:600">${escapeHtml(inv.invoiceNum || ('Row #' + inv.rowNumber))}</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">${escapeHtml(subtitle || '—')}</div>
+          </div>
+          <div style="text-align:right;white-space:nowrap;flex-shrink:0">
+            <div style="font-size:13px;color:white;font-weight:700">${pmtFmt0(inv.finalAmount || inv.amount || 0)}</div>
+            <div style="margin-top:4px;display:flex;justify-content:flex-end;align-items:center;gap:4px">${pill}${approveBtn}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+  pop.style.display = 'block';
+  pop.style.left = Math.max(12, (window.innerWidth - pop.offsetWidth) / 2) + 'px';
+  pop.style.top  = Math.max(12, window.scrollY + (window.innerHeight - pop.offsetHeight) / 2) + 'px';
 }
 
 // ═══════════════════════════════════════════════════════════════════
