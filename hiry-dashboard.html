@@ -1023,8 +1023,8 @@ tr:last-child td { border-bottom: none; }
           </div>
         </div>
       </div>
-      <div style="overflow-x:auto;min-width:0">
-        <table style="width:100%;border-collapse:collapse;table-layout:fixed" id="pmtAcTbl">
+      <div style="overflow-x:auto;min-width:0;max-width:100%">
+        <table style="border-collapse:collapse;min-width:100%;width:max-content" id="pmtAcTbl">
           <thead></thead>
           <tbody><tr><td colspan="8" style="padding:40px;text-align:center;color:var(--muted)">Loading…</td></tr></tbody>
         </table>
@@ -2224,8 +2224,12 @@ function renderInvoicesMode(b) {
   const thead = tbl.querySelector('thead');
   const tbody = tbl.querySelector('tbody');
 
+  // Show breakdown appends 6 extra columns to the same row. The table is
+  // wrapped in an overflow-x:auto container — when breakdown is on, the
+  // table grows past the panel width and scrolls horizontally inside it,
+  // keeping every row aligned and cell widths natural (no squish).
   const cols = pmtShowBreakdown
-    ? ['Date','Client','Candidate','Service','Placed Salary','Final Amount','Status','Actions','Invoice #','Due','Currency','Commission','Deposit','Date Paid']
+    ? ['Date','Client','Candidate','Service','Placed Salary','Final Amount','Status','Actions','Invoice #','Due','Currency','Commission','Deposit','Date Paid','Job Title','Billing Address','Notes']
     : ['Date','Client','Candidate','Service','Placed Salary','Final Amount','Status','Actions'];
 
   thead.innerHTML = '<tr style="border-bottom:1px solid var(--card-border)">' +
@@ -2255,29 +2259,24 @@ function renderInvoicesMode(b) {
       `<td style="padding:10px 8px;font-size:13px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(inv.client || '')}">${escapeHtml(inv.client || '—')}</td>` +
       `<td style="padding:10px 8px;font-size:13px;color:rgba(255,255,255,0.75);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(inv.candidate || '')}">${escapeHtml(inv.candidate || '—')}</td>` +
       `<td style="padding:10px 8px">${servicePill}</td>` +
-      `<td class="num" style="padding:10px 8px;font-size:13px">${inv.placedSalary ? pmtFmtK(inv.placedSalary) : '—'}</td>` +
-      `<td class="num" style="padding:10px 8px;font-size:13px;font-weight:700">${inv.finalAmount ? pmtFmt0(inv.finalAmount) : '—'}</td>` +
-      `<td style="padding:10px 8px">${statusPill}</td>` +
+      `<td class="num" style="padding:10px 8px;font-size:13px;white-space:nowrap">${inv.placedSalary ? pmtFmtK(inv.placedSalary) : '—'}</td>` +
+      `<td class="num" style="padding:10px 8px;font-size:13px;font-weight:700;white-space:nowrap">${inv.finalAmount ? pmtFmt0(inv.finalAmount) : '—'}</td>` +
+      `<td style="padding:10px 8px;white-space:nowrap">${statusPill}</td>` +
       `<td style="padding:10px 8px;white-space:nowrap">${actions}${statusBtn}${noteBtn}</td>`;
 
     const breakdownCells = pmtShowBreakdown
       ? `<td style="padding:10px 8px;font-size:12px;color:var(--muted);white-space:nowrap">${escapeHtml(inv.invoiceNum || '—')}</td>` +
         `<td style="padding:10px 8px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;white-space:nowrap">${escapeHtml(dueStr)}</td>` +
-        `<td style="padding:10px 8px;font-size:12px;color:var(--muted)">${escapeHtml(inv.currency || '')}</td>` +
-        `<td class="num" style="padding:10px 8px;font-size:12px;color:var(--muted)">${escapeHtml(inv.commission || '—')}</td>` +
-        `<td class="num" style="padding:10px 8px;font-size:12px;color:var(--muted)">${inv.deposit ? pmtFmt0(inv.deposit) : '—'}</td>` +
-        `<td style="padding:10px 8px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;white-space:nowrap">${escapeHtml(datePaid)}</td>`
+        `<td style="padding:10px 8px;font-size:12px;color:var(--muted);white-space:nowrap">${escapeHtml(inv.currency || '')}</td>` +
+        `<td class="num" style="padding:10px 8px;font-size:12px;color:var(--muted);white-space:nowrap">${escapeHtml(inv.commission || '—')}</td>` +
+        `<td class="num" style="padding:10px 8px;font-size:12px;color:var(--muted);white-space:nowrap">${inv.deposit ? pmtFmt0(inv.deposit) : '—'}</td>` +
+        `<td style="padding:10px 8px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;white-space:nowrap">${escapeHtml(datePaid)}</td>` +
+        `<td style="padding:10px 8px;font-size:12px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(inv.jobTitle || '')}">${escapeHtml(inv.jobTitle || '—')}</td>` +
+        `<td style="padding:10px 8px;font-size:12px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(inv.billingAddress || '')}">${escapeHtml(inv.billingAddress || '—')}</td>` +
+        `<td style="padding:10px 8px;font-size:12px;color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(inv.notes || '')}">${escapeHtml(inv.notes || '—')}</td>`
       : '';
 
-    const overflowRow = pmtShowBreakdown && (inv.jobTitle || inv.billingAddress || inv.notes)
-      ? `<tr><td colspan="${cols.length}" style="padding:0 8px 10px;font-size:11px;color:var(--muted);background:rgba(255,255,255,0.02)">` +
-        (inv.jobTitle       ? `<div><b style="color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.6px;font-size:10px">Job</b> · ${escapeHtml(inv.jobTitle)}</div>` : '') +
-        (inv.billingAddress ? `<div><b style="color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.6px;font-size:10px">Bill to</b> · ${escapeHtml(inv.billingAddress)}</div>` : '') +
-        (inv.notes          ? `<div><b style="color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.6px;font-size:10px">Notes</b> · ${escapeHtml(inv.notes)}</div>` : '') +
-        '</td></tr>'
-      : '';
-
-    return `<tr class="pmt-row" onclick="openInvoiceDetail(${inv.rowNumber})">${baseCells}${breakdownCells}</tr>${overflowRow}`;
+    return `<tr class="pmt-row" onclick="openInvoiceDetail(${inv.rowNumber})">${baseCells}${breakdownCells}</tr>`;
   }
 
   function sectionHeader(label, count, hint, color) {
