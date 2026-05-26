@@ -1,5 +1,8 @@
 // POST /api/approve
-// Sets the Approved cell to TRUE for a specific Invoicing row.
+// Client-side "Approve" action. With the Approval Status column retired,
+// approval is now a STATUS TRANSITION: writes "AgenCFO Review" to the Status
+// cell of the target row. The row will move from "Awaiting Your Review" to
+// "Scheduled" on the next dashboard read.
 //
 // Body:
 //   { rowNumber: 17, verify: { candidate, client } }
@@ -14,6 +17,11 @@ import {
   findInvoicingHeader,
   colNumToLetter
 } from '../lib/sheets.js';
+
+// The status value to write when the client clicks Approve. Mirrors the
+// allowed list in api/status.js — exact casing matters because data
+// validation on the Status column is keyed to this exact string.
+const APPROVED_STATUS = 'AgenCFO Review';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -52,8 +60,8 @@ export default async function handler(req, res) {
     if (!found) return res.status(500).json({ error: 'Could not parse Invoicing header row' });
 
     const { cols } = found;
-    if (cols.approved < 0) {
-      return res.status(500).json({ error: 'No "Approved" column found in Invoicing tab' });
+    if (cols.status < 0) {
+      return res.status(500).json({ error: 'No "Status" column found in Invoicing tab — Approve needs Status to transition into.' });
     }
 
     const targetRow = rows[rowNumber - 1] || [];
@@ -74,18 +82,33 @@ export default async function handler(req, res) {
       });
     }
 
-    const colLetter = colNumToLetter(cols.approved + 1);
+    // Sanity guard: only transition rows that are actually awaiting client
+    // approval. If someone hits this endpoint for a row that's already past
+    // Client Review (e.g. already sent or paid), refuse — saves us from
+    // accidentally regressing a row's lifecycle.
+    const currentStatus = String(targetRow[cols.status] || '').trim();
+    const csLower = currentStatus.toLowerCase();
+    if (csLower && csLower !== 'client review') {
+      return res.status(409).json({
+        error: `Row is not in Client Review (current status: "${currentStatus}"). Approve only applies to rows awaiting client approval.`,
+        currentStatus
+      });
+    }
+
+    const colLetter = colNumToLetter(cols.status + 1);
     const writeRange = `'${tab}'!${colLetter}${rowNumber}`;
     await sheets.spreadsheets.values.update({
       spreadsheetId: SHEET_ID,
       range: writeRange,
       valueInputOption: 'USER_ENTERED',
-      requestBody: { values: [['TRUE']] }
+      requestBody: { values: [[APPROVED_STATUS]] }
     });
 
     return res.status(200).json({
       ok: true,
       rowNumber,
+      previousStatus: currentStatus || '(blank)',
+      newStatus: APPROVED_STATUS,
       approvedAt: new Date().toISOString(),
       candidate: actualCandidate,
       client: actualClient,
