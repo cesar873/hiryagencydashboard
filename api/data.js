@@ -228,10 +228,17 @@ async function fetchInvoicingData(sheets) {
   }
   const { headerRowIdx, cols } = found;
 
+  // Truthy values that count as "yes / approved / checked" in the sheet.
+  // Covers checkbox columns (Sheets returns "TRUE"/"FALSE"), enum-style cells
+  // ("Approved" / "Pending"), and shorthand glyphs.
+  const TRUTHY = new Set([
+    'true','yes','y','1','checked','x','✓','✔','✔️','approved','done','complete','ok'
+  ]);
   function parseBool(v) {
-    if (!v) return false;
+    if (v == null) return false;
     const s = String(v).trim().toLowerCase();
-    return s === 'true' || s === 'yes' || s === '1' || s === 'checked' || s === 'x' || s === '✓';
+    if (!s) return false;
+    return TRUTHY.has(s);
   }
 
   // Normalise the Service column to canonical "Placement" | "Recruitment".
@@ -244,6 +251,38 @@ async function fetchInvoicingData(sheets) {
     return String(raw).trim();
   }
 
+  // Lifecycle derivation. STATUS is the source of truth — anything past
+  // approval (Open / Sent / Unpaid / Paid / Overdue) implies the row got
+  // approved at some point, even if the Approval Status checkbox is
+  // unticked. The Approved column only matters when Status is empty or
+  // pre-approval ("In Progress" / "AgenCFO Review" / "Client Review").
+  const PRE_APPROVAL = new Set(['', 'in progress', 'agencfo review', 'client review', 'draft', 'pending']);
+  function deriveLifecycle({ statusRaw, approvedCell, sentCell, datePaid }) {
+    const s = (statusRaw || '').toLowerCase().trim();
+    const approvedFlag = parseBool(approvedCell);
+    const sentFlag     = parseBool(sentCell);
+
+    // Paid / closed
+    if (s === 'paid' || s === 'fully paid' || s === 'collected' || datePaid) {
+      return { sentState: 'paid', approved: true, sent: true };
+    }
+    // Overdue (the dashboard also re-derives this at render time from dueDate)
+    if (s === 'overdue' || s === 'late' || s === 'past due') {
+      return { sentState: 'overdue', approved: true, sent: true };
+    }
+    // Outstanding — invoice has been sent, awaiting payment
+    if (s === 'open' || s === 'sent' || s === 'unpaid' || s === 'partially paid' || s === 'awaiting payment') {
+      return { sentState: 'sent', approved: true, sent: true };
+    }
+    // Otherwise: still in pipeline. Approval column decides sub-bucket.
+    if (PRE_APPROVAL.has(s)) {
+      return { sentState: 'pipeline', approved: approvedFlag, sent: sentFlag };
+    }
+    // Unknown status value — pass it through but treat as pipeline so the user
+    // can see and re-categorise it. Approval column still gates awaiting/scheduled.
+    return { sentState: 'pipeline', approved: approvedFlag, sent: sentFlag };
+  }
+
   const invoices = [];
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] || [];
@@ -253,27 +292,17 @@ async function fetchInvoicingData(sheets) {
     if (!client && !candidate && !invDate) continue; // skip blank rows
 
     const service = cols.service >= 0 ? normaliseService(row[cols.service]) : '';
-    const approved = cols.approved >= 0 ? parseBool(row[cols.approved]) : false;
-    const sent = cols.sent >= 0 ? parseBool(row[cols.sent]) : false;
     const statusRaw = cols.status >= 0 ? String(row[cols.status] || '').trim() : '';
-    const sLower = statusRaw.toLowerCase();
     const datePaid = cols.datePaid >= 0 ? String(row[cols.datePaid] || '').trim() : '';
-
-    // sentState is the high-level lifecycle bucket the UI groups on.
-    //   pipeline  → not yet approved OR approved-but-not-sent (drafts + ready)
-    //   sent      → approved + sent + unpaid / partially paid / open
-    //   paid      → fully paid / date-paid present
-    //   overdue   → outstanding past dueDate (computed at render time; default here)
-    let sentState;
-    if (sLower === 'paid' || sLower === 'fully paid' || sLower === 'collected' || datePaid) {
-      sentState = 'paid';
-    } else if (sLower === 'overdue' || sLower === 'late' || sLower === 'past due') {
-      sentState = 'overdue';
-    } else if (!approved || !sent) {
-      sentState = 'pipeline';
-    } else {
-      sentState = 'sent';
-    }
+    const lifecycle = deriveLifecycle({
+      statusRaw,
+      approvedCell: cols.approved >= 0 ? row[cols.approved] : null,
+      sentCell:     cols.sent     >= 0 ? row[cols.sent]     : null,
+      datePaid
+    });
+    const approved = lifecycle.approved;
+    const sent = lifecycle.sent;
+    const sentState = lifecycle.sentState;
 
     const placedSalary = cols.monthlySalary >= 0 ? num(row[cols.monthlySalary]) : 0;
     const finalAmount  = cols.invoiceAmount >= 0 ? num(row[cols.invoiceAmount]) : 0;
@@ -316,6 +345,19 @@ async function fetchInvoicingData(sheets) {
     });
   }
 
+  // Compact debug snapshot — surfaces what we actually detected in the sheet,
+  // so we can diagnose "everything shows as Awaiting Review" type bugs
+  // without round-tripping through the UI. Lives at _meta.invoicing.debug.
+  const headerNames = (rows[headerRowIdx] || []).map(c => String(c || '').trim());
+  const colNames = Object.fromEntries(
+    Object.entries(cols).map(([k, idx]) => [k, (idx != null && idx >= 0) ? (headerNames[idx] || `(col ${idx})`) : null])
+  );
+  const sample = invoices.slice(0, 3).map(inv => ({
+    rowNumber: inv.rowNumber, client: inv.client, candidate: inv.candidate,
+    service: inv.service, statusRaw: inv.statusRaw, approved: inv.approved,
+    sent: inv.sent, sentState: inv.sentState, finalAmount: inv.finalAmount
+  }));
+
   return {
     tab,
     invoices,
@@ -328,7 +370,8 @@ async function fetchInvoicingData(sheets) {
       paid: invoices.filter(x => x.sentState === 'paid').length,
       overdue: invoices.filter(x => x.sentState === 'overdue').length,
       placement: invoices.filter(x => x.service === 'Placement').length,
-      recruitment: invoices.filter(x => x.service === 'Recruitment').length
+      recruitment: invoices.filter(x => x.service === 'Recruitment').length,
+      debug: { headerRowIdx, colNames, sample }
     }
   };
 }
