@@ -2250,9 +2250,9 @@ function renderInvoicesMode(b) {
     const statusPill = renderStatusPill(inv);
     const actions = inv.approved
       ? '<button class="approve-btn" disabled style="background:rgba(34,197,94,0.18);color:#22c55e;border:none;padding:5px 10px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:0.4px;cursor:default;text-transform:uppercase">✓ Approved</button>'
-      : `<button class="pmt-cta" onclick="event.stopPropagation();approveInvoice(${inv.rowNumber}, ${JSON.stringify(inv.candidate).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.client).replace(/"/g, '&quot;')}, this)">✓ Approve</button>`;
-    const statusBtn = `<button class="pmt-ghost" style="margin-left:6px" onclick="event.stopPropagation();openStatusPopover(this, ${inv.rowNumber}, ${JSON.stringify(inv.candidate).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.client).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.statusRaw || '').replace(/"/g, '&quot;')})">Status ▾</button>`;
-    const noteBtn   = `<button class="pmt-ghost" style="margin-left:6px" onclick="event.stopPropagation();openNotePopoverFromInvoice(this, ${inv.rowNumber}, ${JSON.stringify(inv.candidate).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.client).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.notes || '').replace(/"/g, '&quot;')})">Note</button>`;
+      : `<button class="pmt-cta" onclick="event.stopPropagation();approveInvoice(${inv.rowNumber}, ${JSON.stringify(inv.source || '').replace(/"/g, '&quot;')}, ${JSON.stringify(inv.candidate).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.client).replace(/"/g, '&quot;')}, this)">✓ Approve</button>`;
+    const statusBtn = `<button class="pmt-ghost" style="margin-left:6px" onclick="event.stopPropagation();openStatusPopover(this, ${inv.rowNumber}, ${JSON.stringify(inv.source || '').replace(/"/g, '&quot;')}, ${JSON.stringify(inv.candidate).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.client).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.statusRaw || '').replace(/"/g, '&quot;')})">Status ▾</button>`;
+    const noteBtn   = `<button class="pmt-ghost" style="margin-left:6px" onclick="event.stopPropagation();openNotePopoverFromInvoice(this, ${inv.rowNumber}, ${JSON.stringify(inv.source || '').replace(/"/g, '&quot;')}, ${JSON.stringify(inv.candidate).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.client).replace(/"/g, '&quot;')}, ${JSON.stringify(inv.notes || '').replace(/"/g, '&quot;')})">Note</button>`;
 
     const baseCells =
       `<td style="padding:10px 8px;font-size:11px;color:var(--muted);letter-spacing:0.6px;text-transform:uppercase;white-space:nowrap">${escapeHtml(dateStr)}</td>` +
@@ -2656,7 +2656,7 @@ function openArCellDetail(clientName, monthKey) {
         const cliAttr  = JSON.stringify(inv.client).replace(/"/g, '&quot;');
         const approveBtn = inv.approved
           ? '<span class="pmt-status-pill" style="background:rgba(34,197,94,0.18);color:#22c55e;margin-left:6px">✓</span>'
-          : `<button class="pmt-cta" style="margin-left:6px;padding:3px 8px;font-size:9px" onclick="event.stopPropagation();approveInvoice(${inv.rowNumber}, ${candAttr}, ${cliAttr}, this)">✓ Approve</button>`;
+          : `<button class="pmt-cta" style="margin-left:6px;padding:3px 8px;font-size:9px" onclick="event.stopPropagation();approveInvoice(${inv.rowNumber}, ${JSON.stringify(inv.source || '').replace(/"/g, '&quot;')}, ${candAttr}, ${cliAttr}, this)">✓ Approve</button>`;
         const subtitle = [inv.service, inv.candidate].filter(Boolean).join(' · ');
         return `<div onclick="closeDetailPopover();setTimeout(function(){openInvoiceDetail(${inv.rowNumber})},80)"
           style="display:flex;justify-content:space-between;gap:10px;padding:10px 8px;border-bottom:1px dashed rgba(255,255,255,0.06);cursor:pointer;border-radius:4px;transition:background 0.12s"
@@ -2700,8 +2700,8 @@ function positionPopover(popEl, anchorEl) {
 
 // Status popover
 const PMT_STATUS_OPTIONS = ['In Progress','AgenCFO Review','Client Review','Ready','Unpaid','Partially Paid','Fully Paid'];
-function openStatusPopover(anchor, rowNumber, candidate, client, currentStatus) {
-  pmtStatusPopState = { rowNumber, candidate, client, currentStatus, selected: currentStatus };
+function openStatusPopover(anchor, rowNumber, source, candidate, client, currentStatus) {
+  pmtStatusPopState = { rowNumber, source, candidate, client, currentStatus, selected: currentStatus };
   const pop = document.getElementById('pmtStatusPop');
   if (!pop) return;
   const subject = document.getElementById('pmtStatusPopSubject');
@@ -2733,7 +2733,7 @@ async function saveStatusFromPopover() {
     const res = await fetch('/api/status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rowNumber: s.rowNumber, status: s.selected, verify: { candidate: s.candidate, client: s.client } })
+      body: JSON.stringify({ rowNumber: s.rowNumber, source: s.source, status: s.selected, verify: { candidate: s.candidate, client: s.client } })
     });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
@@ -2844,8 +2844,8 @@ async function saveCommentFromPopover() {
 
 // Note popover (reuses comment popover UI but writes to Invoicing notes via /api/note)
 let pmtNotePopState = null;
-function openNotePopoverFromInvoice(anchor, rowNumber, candidate, client, currentNote) {
-  pmtNotePopState = { rowNumber, candidate, client };
+function openNotePopoverFromInvoice(anchor, rowNumber, source, candidate, client, currentNote) {
+  pmtNotePopState = { rowNumber, source, candidate, client };
   // Reuse comment popover DOM
   const pop = document.getElementById('pmtCommentPop');
   if (!pop) return;
@@ -2870,7 +2870,7 @@ async function saveNoteFromPopover() {
     const res = await fetch('/api/note', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rowNumber: s.rowNumber, note, verify: { candidate: s.candidate, client: s.client } })
+      body: JSON.stringify({ rowNumber: s.rowNumber, source: s.source, note, verify: { candidate: s.candidate, client: s.client } })
     });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
@@ -2980,13 +2980,13 @@ document.addEventListener('click', (e) => {
 // ═══════════════════════════════════════════════════════════════════
 // Write-back: Approve / Note (Status, Category, Comment handled via popovers)
 // ═══════════════════════════════════════════════════════════════════
-async function approveInvoice(rowNumber, candidate, client, btnEl) {
+async function approveInvoice(rowNumber, source, candidate, client, btnEl) {
   if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Approving…'; }
   try {
     const res = await fetch('/api/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rowNumber, verify: { candidate, client } })
+      body: JSON.stringify({ rowNumber, source, verify: { candidate, client } })
     });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));

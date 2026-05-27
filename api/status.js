@@ -12,7 +12,7 @@
 import {
   SHEET_ID,
   getSheetsClient,
-  findInvoicingTab,
+  findInvoicingTabForSource,
   findInvoicingHeader,
   colNumToLetter
 } from '../lib/sheets.js';
@@ -47,12 +47,13 @@ export default async function handler(req, res) {
   // Canonicalise to the allowed casing if it matches; else pass through.
   const canonical = ALLOWED.find(s => s.toLowerCase() === statusRaw.toLowerCase()) || statusRaw;
 
+  const source = (body.source === 'candidate' || body.source === 'client') ? body.source : null;
   const verify = body.verify || {};
 
   try {
     const sheets = await getSheetsClient();
-    const tab = await findInvoicingTab(sheets);
-    if (!tab) return res.status(500).json({ error: 'Invoicing tab not found' });
+    const tab = await findInvoicingTabForSource(sheets, source);
+    if (!tab) return res.status(500).json({ error: `Invoicing tab not found for source "${source || '(none)'}"` });
 
     const readRes = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,

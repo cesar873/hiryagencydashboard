@@ -11,7 +11,8 @@ import { google } from 'googleapis';
 import {
   SHEET_ID,
   getSheetsClient,
-  findInvoicingTab, findInvoicingHeader,
+  findInvoicingHeader,
+  matchInvoicingCandidateTab, matchInvoicingClientTab, matchAnyInvoicingTab,
   findBookkeepingTab, parseBookkeepingRows
 } from '../lib/sheets.js';
 const CACHE_TTL_SECONDS = 300; // 5 minutes
@@ -206,9 +207,12 @@ async function fetchBudgetData(sheets, sheetId, tabs) {
   };
 }
 
-// ── Invoicing tab reader (merged: was Candidates + Clients Receivables) ──
-async function fetchInvoicingData(sheets) {
-  const tab = await findInvoicingTab(sheets);
+// ── Invoicing tab reader ────────────────────────────────────────
+// Reads one Invoicing tab. `tab` is the sheet/tab name; `forcedSource` is
+// 'candidate' | 'client' when reading a split tab (the row's source then
+// comes from the tab, not the Service column). Pass null for a merged tab —
+// source is derived from the Service column in that case.
+async function fetchInvoicingData(sheets, tab, forcedSource) {
   if (!tab) return { tab: null, invoices: [], meta: { error: 'No Invoicing tab found' } };
 
   let res;
@@ -224,7 +228,7 @@ async function fetchInvoicingData(sheets) {
   const rows = res.data.values || [];
   const found = findInvoicingHeader(rows);
   if (!found) {
-    return { tab, invoices: [], meta: { error: 'Invoicing header not detected (need Client Name + Candidate Name + Invoice Amount/Approved column)' } };
+    return { tab, invoices: [], meta: { error: 'Invoicing header not detected (need Client Name + Candidate Name + Invoice Amount column)' } };
   }
   const { headerRowIdx, cols } = found;
 
@@ -337,8 +341,9 @@ async function fetchInvoicingData(sheets) {
       invoiceNum: cols.invoiceNum >= 0 ? String(row[cols.invoiceNum] || '').trim() : '',
       billingAddress: cols.billingAddress >= 0 ? String(row[cols.billingAddress] || '').trim() : '',
       notes: cols.notes >= 0 ? String(row[cols.notes] || '').trim() : '',
-      // Legacy aliases — kept so older callers keep working during the migration
-      source: service === 'Placement' ? 'candidate' : 'client',
+      // `source` decides which tab a write goes back to. When reading a split
+      // tab it's forced from the tab; for a merged tab it's derived from Service.
+      source: forcedSource || (service === 'Placement' ? 'candidate' : 'client'),
       billed: placedSalary,
       months: {}
     });
@@ -758,17 +763,43 @@ async function fetchSheetData() {
   const budget = await fetchBudgetData(sheets, SHEET_ID, tabs);
 
   // ── Invoicing + Bookkeeping tab read (Payments tab data) ─────
-  const invoicing = await fetchInvoicingData(sheets);
+  // Invoicing is split into two tabs — read both and merge. Each invoice
+  // carries source = 'candidate' | 'client' (from its tab) so writes route
+  // back correctly. Falls back to a single merged "Invoicing" tab if the
+  // split tabs aren't present.
+  const candidateTabName = matchInvoicingCandidateTab(tabs);
+  const clientTabName     = matchInvoicingClientTab(tabs);
+
+  let invoicingResults = [];
+  if (candidateTabName || clientTabName) {
+    if (candidateTabName) invoicingResults.push(await fetchInvoicingData(sheets, candidateTabName, 'candidate'));
+    if (clientTabName)    invoicingResults.push(await fetchInvoicingData(sheets, clientTabName, 'client'));
+  } else {
+    // Fallback: single merged tab, source derived from the Service column.
+    invoicingResults.push(await fetchInvoicingData(sheets, matchAnyInvoicingTab(tabs), null));
+  }
+
+  const mergedInvoices = invoicingResults.flatMap(r => r.invoices || []);
   const bookkeeping = await fetchBookkeepingData(sheets);
 
   // `receivables` shape is preserved for backwards-compat with the existing
-  // frontend globals (RECEIVABLES.invoices etc.). The Payments-tab rewrite
-  // can read this same object — it carries the new fields (service,
-  // placedSalary, finalAmount, statusRaw) alongside the legacy aliases.
+  // frontend globals (RECEIVABLES.invoices etc.). The Payments tab reads this
+  // same object — it carries service, placedSalary, finalAmount, statusRaw,
+  // and source alongside the legacy aliases.
   const receivables = {
-    invoices: invoicing.invoices,
-    tab: invoicing.tab,
-    meta: invoicing.meta
+    invoices: mergedInvoices,
+    tabs: invoicingResults.map(r => r.tab).filter(Boolean),
+    meta: {
+      total: mergedInvoices.length,
+      pipeline: mergedInvoices.filter(x => x.sentState === 'pipeline').length,
+      sent: mergedInvoices.filter(x => x.sentState === 'sent').length,
+      paid: mergedInvoices.filter(x => x.sentState === 'paid').length,
+      overdue: mergedInvoices.filter(x => x.sentState === 'overdue').length,
+      candidate: mergedInvoices.filter(x => x.source === 'candidate').length,
+      client: mergedInvoices.filter(x => x.source === 'client').length,
+      sources: invoicingResults.map(r => ({ tab: r.tab, count: (r.invoices || []).length, error: r.meta && r.meta.error })),
+      debug: invoicingResults.map(r => r.meta && r.meta.debug).filter(Boolean)
+    }
   };
 
   return {
@@ -806,7 +837,7 @@ async function fetchSheetData() {
       budget: budget.meta,
       receivables: receivables.meta,
       bookkeeping: bookkeeping.meta,
-      invoicingTab: invoicing.tab,
+      invoicingTabs: receivables.tabs,
       bookkeepingTab: bookkeeping.tab
     }
   };

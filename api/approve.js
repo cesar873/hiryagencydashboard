@@ -13,7 +13,7 @@
 import {
   SHEET_ID,
   getSheetsClient,
-  findInvoicingTab,
+  findInvoicingTabForSource,
   findInvoicingHeader,
   colNumToLetter
 } from '../lib/sheets.js';
@@ -41,13 +41,14 @@ export default async function handler(req, res) {
   if (!rowNumber || rowNumber < 2) {
     return res.status(400).json({ error: 'rowNumber required and must be >= 2' });
   }
+  const source = (body.source === 'candidate' || body.source === 'client') ? body.source : null;
   const verify = body.verify || {};
 
   try {
     const sheets = await getSheetsClient();
 
-    const tab = await findInvoicingTab(sheets);
-    if (!tab) return res.status(500).json({ error: 'Invoicing tab not found in spreadsheet' });
+    const tab = await findInvoicingTabForSource(sheets, source);
+    if (!tab) return res.status(500).json({ error: `Invoicing tab not found for source "${source || '(none)'}"` });
 
     const range = `'${tab}'!A1:AZ${rowNumber}`;
     const readRes = await sheets.spreadsheets.values.get({
