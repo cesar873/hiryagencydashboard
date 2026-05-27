@@ -13,7 +13,8 @@
 import {
   SHEET_ID,
   getSheetsClient,
-  findBookkeepingTab
+  findBookkeepingTab,
+  classifyBookkeepingColumns
 } from '../lib/sheets.js';
 
 const CATEGORY_COL = 'N'; // fixed by spec — see dashboard_buildout.md §"Two-way sync"
@@ -45,17 +46,19 @@ export default async function handler(req, res) {
     const tab = await findBookkeepingTab(sheets);
     if (!tab) return res.status(500).json({ error: 'Bookkeeping tab not found' });
 
-    // Read the target row to verify (E=Description proxy, F=Vendor)
+    // Read header (row 1) + the target row in one call, then classify columns
+    // by header — same logic the reader uses — so verification compares the
+    // RIGHT cells regardless of where vendor/description actually sit.
     const readRes = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
-      range: `'${tab}'!A${rowNumber}:O${rowNumber}`,
+      range: `'${tab}'!A1:O${rowNumber}`,
       valueRenderOption: 'FORMATTED_VALUE'
     });
-    const targetRow = (readRes.data.values || [])[0] || [];
-    const actualDate        = String(targetRow[4]  || '').trim(); // E
-    const actualVendor      = String(targetRow[5]  || '').trim(); // F
-    const actualDescription = String(targetRow[6]  || '').trim(); // G
-    const actualAmount      = String(targetRow[7]  || '').trim(); // H
+    const allRows = readRes.data.values || [];
+    const { cols } = classifyBookkeepingColumns(allRows[0]);
+    const targetRow = allRows[rowNumber - 1] || [];
+    const actualVendor      = String(targetRow[cols.vendor] || '').trim();
+    const actualDescription = String(targetRow[cols.description] || '').trim();
     if (verify.vendor && verify.vendor !== actualVendor) {
       return res.status(409).json({ error: 'Row verification failed (vendor mismatch).', expected: verify.vendor, actual: actualVendor });
     }
@@ -85,7 +88,12 @@ export default async function handler(req, res) {
       category,
       cellWritten: writeRange,
       savedAt: new Date().toISOString(),
-      context: { date: actualDate, vendor: actualVendor, description: actualDescription, amount: actualAmount }
+      context: {
+        date: String(targetRow[cols.date] || '').trim(),
+        vendor: actualVendor,
+        description: actualDescription,
+        amount: String(targetRow[cols.amount] || '').trim()
+      }
     });
   } catch (e) {
     console.error('[api/category] Error:', e);
