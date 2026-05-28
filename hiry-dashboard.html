@@ -1691,6 +1691,9 @@ function applyFilters() {
   renderExpCat();
   renderBudget();
   applyRangeToCharts();
+  // Payments tab re-renders so Period + Range changes flow through the
+  // KPI strip, Pipeline / Outstanding tables, and AR Grid month columns.
+  renderPayments();
 }
 
 // ── Budget vs Actual renderer ──────────────────────────
@@ -2119,16 +2122,68 @@ function pmtMonthLabel(key) {
   return `${NAMES[parseInt(mm) - 1]} ${y}`;
 }
 
-// Bucket invoices into lifecycle categories. Derives "overdue" from dueDate.
-function pmtBucketInvoices(invoices) {
+// Convert a "Mmm YY" month label to a date range + canonical YYYY-MM key.
+const PMT_MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function pmtMonthLabelToRange(label) {
+  if (!label) return null;
+  const parts = String(label).trim().split(/\s+/);
+  const monIdx = PMT_MONTH_NAMES.indexOf(parts[0]);
+  if (monIdx < 0 || !parts[1]) return null;
+  const year = 2000 + parseInt(parts[1], 10);
+  return {
+    start: new Date(year, monIdx, 1, 0, 0, 0, 0),
+    end:   new Date(year, monIdx + 1, 0, 23, 59, 59, 999),
+    key:   `${year}-${String(monIdx + 1).padStart(2, '0')}`,
+    label: label
+  };
+}
+
+// Read the global Period filter → { start, end, key, label, asOf }.
+// asOf = end-of-period clamped to today (so future Period months still
+// produce sensible "as of now" KPIs instead of looking ahead).
+function pmtGetSelectedPeriod() {
+  const idx = (typeof filterState !== 'undefined' && filterState && filterState.period != null) ? filterState.period : -1;
+  const label = (typeof MONTHS !== 'undefined' && MONTHS && MONTHS[idx]) || null;
+  let r = label ? pmtMonthLabelToRange(label) : null;
+  if (!r) {
+    // No filter yet — anchor on today's calendar month.
+    const t = new Date();
+    r = {
+      start: new Date(t.getFullYear(), t.getMonth(), 1, 0, 0, 0, 0),
+      end:   new Date(t.getFullYear(), t.getMonth() + 1, 0, 23, 59, 59, 999),
+      key:   `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}`,
+      label: `${PMT_MONTH_NAMES[t.getMonth()]} ${String(t.getFullYear()).slice(2)}`
+    };
+  }
   const today = new Date();
+  r.asOf = r.end > today ? today : r.end;
+  return r;
+}
+
+// Read the global Range filter → array of YYYY-MM keys, in order.
+function pmtGetRangeMonthKeys() {
+  if (typeof MONTHS === 'undefined' || !MONTHS) return [];
+  const s = (typeof filterState !== 'undefined' && filterState) ? filterState.rangeStart : 0;
+  const e = (typeof filterState !== 'undefined' && filterState) ? filterState.rangeEnd : MONTHS.length - 1;
+  const out = [];
+  for (let i = s; i <= e; i++) {
+    const r = pmtMonthLabelToRange(MONTHS[i]);
+    if (r) out.push(r.key);
+  }
+  return out;
+}
+
+// Bucket invoices into lifecycle categories using an as-of date — so a row
+// that's currently overdue but wasn't overdue as of the selected month gets
+// bucketed correctly (sent, not overdue) when looking at past periods.
+function pmtBucketInvoices(invoices, asOf) {
+  const asOfDate = asOf || new Date();
   const out = { pipeline: [], awaitingReview: [], scheduled: [], outstanding: [], overdue: [], paid: [], all: invoices };
   for (const inv of invoices) {
     let state = inv.sentState;
-    // Promote to overdue if outstanding past due date
     if (state === 'sent' && inv.dueDate) {
       const dueDt = parseDDMMYYYY(inv.dueDate);
-      if (dueDt && dueDt < today) state = 'overdue';
+      if (dueDt && dueDt < asOfDate) state = 'overdue';
     }
     inv._effectiveState = state;
     if (state === 'pipeline') {
@@ -2142,67 +2197,78 @@ function pmtBucketInvoices(invoices) {
   return out;
 }
 
-// ── Main entry point — called from showTab / data load ──────────
+// ── Main entry point — called from showTab / data load / applyFilters ──
 function renderPayments() {
-  const invoices = (RECEIVABLES && RECEIVABLES.invoices) || [];
+  const allInvoices = (RECEIVABLES && RECEIVABLES.invoices) || [];
   const bk = (typeof BOOKKEEPING !== 'undefined' && BOOKKEEPING) || { coa: [], transactions: [], meta: {} };
-  const buckets = pmtBucketInvoices(invoices);
 
-  // Subline
+  // Period (single month) scopes KPIs + Pipeline + Outstanding tables.
+  // Invoice date is the anchor — "invoices billed in this month".
+  const period = pmtGetSelectedPeriod();
+  const periodInvoices = allInvoices.filter(inv => {
+    const dt = parseDDMMYYYY(inv.invoiceDate);
+    if (!dt) return false;
+    return dt >= period.start && dt <= period.end;
+  });
+  const buckets = pmtBucketInvoices(periodInvoices, period.asOf);
+
+  // Subline reflects the active Period, not "today"
   const sub = document.getElementById('pmtSub');
-  if (sub) {
-    const MONTH_SHORT_LBL = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const today = new Date();
-    const currentMonthLabel = MONTH_SHORT_LBL[today.getMonth()] + ' ' + String(today.getFullYear()).slice(2);
-    sub.textContent = currentMonthLabel + ' · live from the Invoicing tab';
-  }
+  if (sub) sub.textContent = period.label + ' · live from the Invoicing tab';
 
-  renderPaymentsKpis(buckets);
+  renderPaymentsKpis(buckets, period);
   renderOutstandingSummary(buckets);
   updateTransactionsBadge(bk);
   if (pmtMode === 'invoices') renderInvoicesMode(buckets);
   else                        renderTransactionsMode(bk);
-  renderArGrid(invoices);
+  // AR Grid uses the full invoice set + Range filter for the month columns —
+  // it's the "context" matrix, not a single-month snapshot.
+  renderArGrid(allInvoices);
 }
 
 // ── KPI strip ───────────────────────────────────────────────────
-function renderPaymentsKpis(b) {
-  const today = new Date();
+// All KPIs are anchored to the selected Period:
+//   - Buckets are computed using period.asOf so overdue/sent state reflects
+//     what the row WAS at end-of-period, not the live state today.
+//   - "Due Next 7 Days" measures the 7-day window starting at asOf.
+//   - "Collected · {Period}" sums invoices paid during the Period month
+//     (matched on datePaid, falling back to invoiceDate for legacy rows).
+function renderPaymentsKpis(b, period) {
+  const asOf = (period && period.asOf) || new Date();
   const sumAmt = arr => arr.reduce((s, i) => s + (i.finalAmount || i.amount || 0), 0);
 
   const outstandingTotal = sumAmt(b.outstanding);
   const overdueTotal     = sumAmt(b.overdue);
   const pipelineTotal    = sumAmt(b.pipeline);
 
-  // Worst overdue age — uses dueDate if available, otherwise invoiceDate
+  // Worst overdue age — days between asOf and (dueDate or invoiceDate)
   let worstOverdue = 0;
   for (const inv of b.overdue) {
     const ref = inv.dueDate || inv.invoiceDate;
     const dt = parseDDMMYYYY(ref);
     if (dt) {
-      const days = Math.floor((today - dt) / 86400000);
+      const days = Math.floor((asOf - dt) / 86400000);
       if (days > worstOverdue) worstOverdue = days;
     }
   }
 
-  // Due next 7 days
-  const in7 = new Date(today.getTime() + 7 * 86400000);
+  // Due next 7 days from asOf
+  const in7 = new Date(asOf.getTime() + 7 * 86400000);
   let due7 = 0, due7Count = 0;
   for (const inv of b.outstanding) {
     if (!inv.dueDate) continue;
     const dueDt = parseDDMMYYYY(inv.dueDate);
     if (!dueDt) continue;
-    if (dueDt >= today && dueDt <= in7) { due7 += (inv.finalAmount || inv.amount || 0); due7Count++; }
+    if (dueDt >= asOf && dueDt <= in7) { due7 += (inv.finalAmount || inv.amount || 0); due7Count++; }
   }
 
-  // Collected this calendar month
-  const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  // Collected during the selected Period month
+  const periodKey = period && period.key;
   let collectedTotal = 0, collectedCount = 0;
   for (const inv of b.paid) {
     const k = pmtMonthYearKey(inv.datePaid || inv.invoiceDate);
-    if (k === monthKey) { collectedTotal += (inv.finalAmount || inv.amount || 0); collectedCount++; }
+    if (k === periodKey) { collectedTotal += (inv.finalAmount || inv.amount || 0); collectedCount++; }
   }
-  const MONTH_LBL = today.toLocaleString('en-US', { month: 'short' }) + ' ' + String(today.getFullYear()).slice(2);
 
   setText('pmtOutstanding', pmtFmtK(outstandingTotal));
   setText('pmtOutstandingSub', '— ' + b.outstanding.length + ' open invoice' + (b.outstanding.length === 1 ? '' : 's'));
@@ -2212,7 +2278,7 @@ function renderPaymentsKpis(b) {
   setText('pmtDue7Sub', due7Count > 0 ? `— ${due7Count} invoice${due7Count === 1 ? '' : 's'} · next 7 days` : '— nothing imminent');
   setText('pmtPipeline', pmtFmtK(pipelineTotal));
   setText('pmtPipelineSub', `— ${b.pipeline.length} drafts + ready`);
-  setText('pmtCollectedLabel', 'Collected · ' + MONTH_LBL);
+  setText('pmtCollectedLabel', 'Collected · ' + ((period && period.label) || '—'));
   setText('pmtCollected', pmtFmtK(collectedTotal));
   setText('pmtCollectedSub', collectedCount > 0 ? `— ${collectedCount} paid` : '— 0 paid');
 }
@@ -2531,13 +2597,17 @@ function renderArGrid(invoices) {
   const statusFilter = (document.getElementById('pmtArStatus') || {}).value || '';
   const searchTerm = ((document.getElementById('pmtArSearch') || {}).value || '').toLowerCase().trim();
 
-  // Collect month columns from the 4 most recent months that have data + lookahead
-  const monthSet = new Set();
-  for (const inv of invoices) {
-    const k = pmtMonthYearKey(inv.dueDate || inv.invoiceDate);
-    if (k) monthSet.add(k);
+  // Month columns come from the global Range filter — Apr 25 → Apr 26 etc.
+  // Falls back to auto-deriving from invoice dates if Range isn't set yet.
+  let months = pmtGetRangeMonthKeys();
+  if (months.length === 0) {
+    const monthSet = new Set();
+    for (const inv of invoices) {
+      const k = pmtMonthYearKey(inv.dueDate || inv.invoiceDate);
+      if (k) monthSet.add(k);
+    }
+    months = Array.from(monthSet).sort();
   }
-  const months = Array.from(monthSet).sort();
   if (months.length === 0) {
     thead.innerHTML = '';
     tbody.innerHTML = '<tr><td style="padding:40px;text-align:center;color:var(--muted)">No invoice data with dates to bucket.</td></tr>';
@@ -2575,7 +2645,8 @@ function renderArGrid(invoices) {
   }
 
   // Limit to last 12 month columns to keep the grid readable
-  const visibleMonths = months.slice(-12);
+  // Show every Range month — the grid already scrolls horizontally if wide.
+  const visibleMonths = months;
 
   // Sticky-column background — solid enough that scrolling cells underneath
   // don't bleed through. Matches the panel surface tone.
