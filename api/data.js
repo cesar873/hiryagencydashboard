@@ -308,7 +308,13 @@ async function fetchInvoicingData(sheets, tab, forcedSource) {
     const sentState = lifecycle.sentState;
 
     const placedSalary = cols.monthlySalary >= 0 ? num(row[cols.monthlySalary]) : 0;
-    const finalAmount  = cols.invoiceAmount >= 0 ? num(row[cols.invoiceAmount]) : 0;
+    const finalAmountNative = cols.invoiceAmount    >= 0 ? num(row[cols.invoiceAmount])    : 0;
+    const finalAmountUSD    = cols.invoiceAmountUSD >= 0 ? num(row[cols.invoiceAmountUSD]) : 0;
+    // When the sheet has a dedicated "Amount USD" column, that's the source
+    // of truth for the dashboard's KPI display — mixed-currency rows aggregate
+    // correctly because everything's already pre-converted. When that column
+    // doesn't exist, fall back to the native Invoice Amount column.
+    const finalAmount = cols.invoiceAmountUSD >= 0 ? finalAmountUSD : finalAmountNative;
     const commissionStr = cols.commission >= 0 ? String(row[cols.commission] || '').trim() : '';
     const commissionPct = num(commissionStr);
     const deposit = cols.deposit >= 0 ? num(row[cols.deposit]) : 0;
@@ -325,7 +331,9 @@ async function fetchInvoicingData(sheets, tab, forcedSource) {
       commission: commissionStr,
       commissionPct,
       deposit,
-      finalAmount,                      // Hiry's actual receivable for this line
+      finalAmount,                      // USD if the sheet has an Amount USD column, else native
+      finalAmountNative,                // native-currency invoice amount (for reference)
+      finalAmountUSD,                   // raw USD column value (0 if no column / unfilled)
       amount: finalAmount,              // alias kept for legacy code paths
       currency: cols.currency >= 0 ? (String(row[cols.currency] || '').trim() || 'USD') : 'USD',
       // Lifecycle
