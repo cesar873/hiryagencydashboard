@@ -664,7 +664,13 @@ async function fetchSheetData() {
     if (allTotalRev[i] !== 0) { lastNonZero = i; break; }
   }
   if (lastNonZero < 0) lastNonZero = allTotalRev.length - 1;
-  const endCol = lastNonZero + 1;
+  // Include a lookahead window past the last actual month so future months
+  // (e.g. June 2026 when actuals only run through April) stay selectable in
+  // the global Period dropdown — needed for the Payments tab's "Collected ·
+  // {month}" KPI, which targets the selected month. Capped at the actual
+  // number of P&L columns in the sheet.
+  const FUTURE_LOOKAHEAD = 6;
+  const endCol = Math.min(allTotalRev.length, lastNonZero + 1 + FUTURE_LOOKAHEAD);
   const startCol = Math.max(0, endCol - TRAILING_MONTHS);
   const window = (arr) => arr.slice(startCol, endCol);
 

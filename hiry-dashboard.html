@@ -2256,9 +2256,13 @@ function renderPaymentsKpis(b, asOfDate) {
     if (dueDt >= asOf && dueDt <= in7) { due7 += (inv.finalAmount || inv.amount || 0); due7Count++; }
   }
 
-  // Collected this calendar month
-  const monthKey = `${asOf.getFullYear()}-${String(asOf.getMonth() + 1).padStart(2, '0')}`;
-  const monthLabel = `${PMT_MONTH_NAMES[asOf.getMonth()]} ${String(asOf.getFullYear()).slice(2)}`;
+  // Collected · {Period month}. Unlike the other KPIs (which are live AR),
+  // Collected is naturally a per-month metric — invoices PAID in the
+  // selected month. Reads the global Period dropdown, so picking a
+  // different month repoints Collected to that month's collections.
+  const period = pmtGetSelectedPeriod();
+  const monthKey = period.key;
+  const monthLabel = period.label;
   let collectedTotal = 0, collectedCount = 0;
   for (const inv of b.paid) {
     const k = pmtMonthYearKey(inv.datePaid || inv.invoiceDate);
