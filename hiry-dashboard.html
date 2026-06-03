@@ -1062,7 +1062,7 @@ tr:last-child td { border-bottom: none; }
               <col style="width:16%">
             </colgroup>
             <thead><tr style="border-bottom:1px solid var(--card-border)">
-              <th style="text-align:left;padding:8px 6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Client</th>
+              <th style="text-align:left;padding:8px 6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px" title="Candidate for Placement rows · Client for Recruitment rows">Client / Cand.</th>
               <th style="text-align:left;padding:8px 6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Service</th>
               <th class="num" style="padding:8px 6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Amount</th>
               <th class="num" style="padding:8px 6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Due</th>
@@ -2574,8 +2574,15 @@ function renderOutstandingSummary(b) {
           else daysCell = `<span style="color:var(--muted)">—</span>`;
         }
         const serviceShort = inv.service || '—';
+        // Placement rows are candidate-facing (Hiry placed the candidate
+        // somewhere) — show the candidate; Recruitment rows are
+        // client-facing — show the client. Falls back to the other field
+        // if the primary one is empty.
+        const partyName = inv.service === 'Placement'
+          ? (inv.candidate || inv.client || '—')
+          : (inv.client || inv.candidate || '—');
         return `<tr class="pmt-row" onclick="openInvoiceDetail(${inv.rowNumber})">` +
-          `<td style="padding:8px 6px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px" title="${escapeHtml(inv.client || '')}">${escapeHtml(inv.client || '—')}</td>` +
+          `<td style="padding:8px 6px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px" title="${escapeHtml(partyName)}">${escapeHtml(partyName)}</td>` +
           `<td style="padding:8px 6px;font-size:12px;color:rgba(255,255,255,0.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px" title="${escapeHtml(serviceShort)}">${escapeHtml(serviceShort)}</td>` +
           `<td class="num" style="padding:8px 6px;font-size:12px;font-weight:700">${pmtFmtK(inv.finalAmount || inv.amount || 0)}</td>` +
           `<td class="num" style="padding:8px 6px;font-size:11px;color:var(--muted);white-space:nowrap">${escapeHtml(dueStr)}</td>` +
