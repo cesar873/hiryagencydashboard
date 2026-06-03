@@ -2620,11 +2620,19 @@ function renderArGrid(invoices) {
     return;
   }
 
-  // Bucket invoices by client × month
-  const byClient = {};   // client → { months: { key: { total, status, count, adjustments } }, total, openTotal }
+  // Bucket invoices by row-party × month. For Placement rows the party
+  // is the candidate (Hiry placed THAT candidate); for Recruitment rows
+  // the party is the client (Hiry recruits FOR that client). Mirrors the
+  // Sent & Unpaid sidebar so the AR grid groups + labels the same way.
+  function partyOf(inv) {
+    return inv.service === 'Placement'
+      ? (inv.candidate || inv.client || '—')
+      : (inv.client || inv.candidate || '—');
+  }
+  const byClient = {};   // party → { months: { key: { total, count, statusRank, hasAdjust } }, total, openTotal }
   for (const inv of invoices) {
     if (statusFilter && inv._effectiveState !== statusFilter) continue;
-    const name = inv.client || inv.candidate || '—';
+    const name = partyOf(inv);
     if (searchTerm && !name.toLowerCase().includes(searchTerm)) continue;
     const k = pmtMonthYearKey(inv.dueDate || inv.invoiceDate);
     if (!k) continue;
@@ -2712,9 +2720,14 @@ function renderArGrid(invoices) {
 // instead of a single invoice's field dump. Clicking any list item closes
 // this view and opens that invoice's full detail.
 function openArCellDetail(clientName, monthKey) {
+  // Mirror the grouping rule used by renderArGrid: Placement rows key on
+  // candidate, Recruitment rows key on client. Otherwise clicking a row
+  // labeled with a candidate name would find zero invoices.
+  const partyOf = inv => inv.service === 'Placement'
+    ? (inv.candidate || inv.client || '—')
+    : (inv.client || inv.candidate || '—');
   const matching = ((typeof RECEIVABLES !== 'undefined' && RECEIVABLES.invoices) || []).filter(inv => {
-    const name = inv.client || inv.candidate || '—';
-    if (name !== clientName) return false;
+    if (partyOf(inv) !== clientName) return false;
     return pmtMonthYearKey(inv.dueDate || inv.invoiceDate) === monthKey;
   });
   const pop = document.getElementById('pmtDetailPop');
