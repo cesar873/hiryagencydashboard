@@ -2341,7 +2341,7 @@ function renderInvoicesMode(b) {
         `<td style="padding:10px 8px;font-size:12px;color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(inv.notes || '')}">${escapeHtml(inv.notes || '—')}</td>`
       : '';
 
-    return `<tr class="pmt-row" onclick="openInvoiceDetail(${inv.rowNumber})">${baseCells}${breakdownCells}</tr>`;
+    return `<tr class="pmt-row" onclick="event.stopPropagation();openInvoiceDetail(${inv.rowNumber})">${baseCells}${breakdownCells}</tr>`;
   }
 
   function sectionHeader(label, count, hint, color) {
@@ -2423,7 +2423,7 @@ function renderTransactionsMode(bk) {
 
     const amountNum = (function parse(s) { const n = parseFloat(String(s).replace(/[^0-9.\-]/g, '')); return isNaN(n) ? 0 : n; })(t.amountRaw);
 
-    return `<tr class="pmt-row" onclick="openTransactionDetail(${t.rowNumber})">` +
+    return `<tr class="pmt-row" onclick="event.stopPropagation();openTransactionDetail(${t.rowNumber})">` +
       `<td style="padding:10px 8px;font-size:11px;color:var(--muted);letter-spacing:0.6px;white-space:nowrap">${escapeHtml(t.date || '—')}</td>` +
       `<td style="padding:10px 8px;font-size:13px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(t.description || '')}">${escapeHtml(t.description || '—')}</td>` +
       `<td style="padding:10px 8px;font-size:13px;color:rgba(255,255,255,0.75);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(t.vendor || '')}">${escapeHtml(t.vendor || '—')}</td>` +
@@ -2581,7 +2581,7 @@ function renderOutstandingSummary(b) {
         const partyName = inv.service === 'Placement'
           ? (inv.candidate || inv.client || '—')
           : (inv.client || inv.candidate || '—');
-        return `<tr class="pmt-row" onclick="openInvoiceDetail(${inv.rowNumber})">` +
+        return `<tr class="pmt-row" onclick="event.stopPropagation();openInvoiceDetail(${inv.rowNumber})">` +
           `<td style="padding:8px 6px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px" title="${escapeHtml(partyName)}">${escapeHtml(partyName)}</td>` +
           `<td style="padding:8px 6px;font-size:12px;color:rgba(255,255,255,0.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px" title="${escapeHtml(serviceShort)}">${escapeHtml(serviceShort)}</td>` +
           `<td class="num" style="padding:8px 6px;font-size:12px;font-weight:700">${pmtFmtK(inv.finalAmount || inv.amount || 0)}</td>` +
@@ -2702,7 +2702,7 @@ function renderArGrid(invoices) {
       }
       const adj = cell.hasAdjust ? '<span style="position:absolute;top:6px;left:8px;font-size:9px;opacity:0.7">△</span>' : '';
       const countTag = cell.count > 1 ? `<span style="position:absolute;top:6px;left:8px;font-size:9px;background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;letter-spacing:0.5px">×${cell.count}</span>` : adj;
-      return `<td onclick="openArCellDetail(${nameAttr}, ${monthAttr})" style="position:relative;padding:14px 12px;border-radius:8px;${cellStyle(cell)};text-align:right;font-size:13px;font-weight:700;white-space:nowrap;cursor:pointer;transition:filter 0.12s" onmouseover="this.style.filter='brightness(1.2)'" onmouseout="this.style.filter='none'">${countTag}${pmtFmtK(cell.total)}</td>`;
+      return `<td onclick="event.stopPropagation();openArCellDetail(${nameAttr}, ${monthAttr})" style="position:relative;padding:14px 12px;border-radius:8px;${cellStyle(cell)};text-align:right;font-size:13px;font-weight:700;white-space:nowrap;cursor:pointer;transition:filter 0.12s" onmouseover="this.style.filter='brightness(1.2)'" onmouseout="this.style.filter='none'">${countTag}${pmtFmtK(cell.total)}</td>`;
     }).join('');
     const totalLabel = c.openTotal > 0
       ? `<div style="font-family:'Anton',sans-serif;font-size:14px;letter-spacing:0.5px">${pmtFmtK(c.total)}</div><div style="font-size:10px;color:var(--amber)">${pmtFmtK(c.openTotal)} open</div>`
