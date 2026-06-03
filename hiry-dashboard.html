@@ -2776,7 +2776,27 @@ function positionPopover(popEl, anchorEl) {
 }
 
 // Status popover
-const PMT_STATUS_OPTIONS = ['In Progress','AgenCFO Review','Client Review','Ready','Unpaid','Partially Paid','Fully Paid'];
+//
+// Options are built from a baseline of Hiry's workflow statuses (in
+// lifecycle order: Client Review → AgenCFO Review → Open → Overdue → Paid),
+// then extended with any other distinct values present in the live Status
+// column. So if you start using a new status value in the sheet, it shows
+// up here automatically without a frontend change — no more hardcoded
+// drop-down that drifts from the sheet.
+const PMT_STATUS_BASELINE = ['Client Review', 'AgenCFO Review', 'Open', 'Overdue', 'Paid'];
+function pmtGetStatusOptions() {
+  const ordered = [...PMT_STATUS_BASELINE];
+  const seen = new Set(PMT_STATUS_BASELINE.map(s => s.toLowerCase()));
+  const invoices = (typeof RECEIVABLES !== 'undefined' && RECEIVABLES && RECEIVABLES.invoices) || [];
+  for (const inv of invoices) {
+    const s = String(inv.statusRaw || '').trim();
+    if (!s) continue;
+    const lc = s.toLowerCase();
+    if (!seen.has(lc)) { ordered.push(s); seen.add(lc); }
+  }
+  return ordered;
+}
+
 function openStatusPopover(anchor, rowNumber, source, candidate, client, currentStatus) {
   pmtStatusPopState = { rowNumber, source, candidate, client, currentStatus, selected: currentStatus };
   const pop = document.getElementById('pmtStatusPop');
@@ -2785,7 +2805,7 @@ function openStatusPopover(anchor, rowNumber, source, candidate, client, current
   if (subject) subject.textContent = client || candidate || '';
   const opts = document.getElementById('pmtStatusPopOptions');
   if (opts) {
-    opts.innerHTML = PMT_STATUS_OPTIONS.map(s => {
+    opts.innerHTML = pmtGetStatusOptions().map(s => {
       const checked = (currentStatus || '').toLowerCase() === s.toLowerCase();
       return `<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px;${checked ? 'background:rgba(19,144,235,0.10);color:#7dd3fc' : 'color:rgba(255,255,255,0.85)'}" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='${checked ? 'rgba(19,144,235,0.10)' : 'transparent'}'">
         <input type="radio" name="pmtStatusOpt" value="${escapeHtml(s)}"${checked ? ' checked' : ''} onchange="pmtStatusPopState && (pmtStatusPopState.selected = this.value)" style="accent-color:#1390eb"/>
