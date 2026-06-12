@@ -2773,17 +2773,31 @@ function openArCellDetail(clientName, monthKey) {
 // ═══════════════════════════════════════════════════════════════════
 function positionPopover(popEl, anchorEl) {
   if (!popEl || !anchorEl) return;
+  // Popovers are position:fixed, so coordinates are VIEWPORT-relative —
+  // getBoundingClientRect() is already viewport-relative, so we must NOT add
+  // window.scrollX/Y (doing so pushed the popover off-screen once the page
+  // was scrolled down).
   const rect = anchorEl.getBoundingClientRect();
-  const popW = popEl.offsetWidth || 260;
+  const popW = popEl.offsetWidth || 300;
   const popH = popEl.offsetHeight || 200;
-  let left = rect.left + window.scrollX;
-  let top  = rect.bottom + window.scrollY + 6;
-  // Flip if would overflow right edge
-  if (left + popW > window.innerWidth - 12) left = Math.max(12, window.innerWidth - popW - 12);
-  // Flip up if would overflow bottom
-  if (top + popH > window.innerHeight + window.scrollY - 12) {
-    top = rect.top + window.scrollY - popH - 6;
+  const M = 12;            // viewport margin
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // Horizontal: anchor to the trigger's left, clamp into the viewport.
+  let left = rect.left;
+  if (left + popW > vw - M) left = vw - popW - M;
+  if (left < M) left = M;
+
+  // Vertical: prefer below the trigger; flip above if it would overflow the
+  // bottom; if it still doesn't fit (tall popover on a short viewport),
+  // clamp so the whole box stays visible.
+  let top = rect.bottom + 6;
+  if (top + popH > vh - M) {
+    const above = rect.top - popH - 6;
+    top = above >= M ? above : Math.max(M, vh - popH - M);
   }
+
   popEl.style.left = left + 'px';
   popEl.style.top  = top + 'px';
 }
