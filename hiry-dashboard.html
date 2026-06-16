@@ -863,17 +863,17 @@ tr:last-child td { border-bottom: none; }
       <div class="delta" id="kpiOpIncSub">42.2% margin</div>
     </div>
     <div class="kpi">
-      <div class="label">Op Margin (Apr 2026)</div>
+      <div class="label" id="kpiOpMarginLabel">Op Margin (Apr 2026)</div>
       <div class="value" id="kpiOpMargin">42.2%</div>
       <div class="delta">TTM avg 57.5%</div>
     </div>
     <div class="kpi">
-      <div class="label">Gross Margin (Apr 2026)</div>
+      <div class="label" id="kpiGrossMarginLabel">Gross Margin (Apr 2026)</div>
       <div class="value" id="kpiGrossMargin">78.6%</div>
       <div class="delta">TTM avg 86.4%</div>
     </div>
     <div class="kpi">
-      <div class="label">Net Margin (Apr 2026)</div>
+      <div class="label" id="kpiNetMarginLabel">Net Margin (Apr 2026)</div>
       <div class="value" id="kpiNetMargin">42.2%</div>
       <div class="delta">TTM avg 57.5%</div>
     </div>
@@ -1472,11 +1472,15 @@ function updateKPIs() {
   const opInc = operatingInc[p] || 0;
   const gm = grossMargin[p] || 0;
   const om = opMargin[p] || 0;
-  setText('kpiOpIncLabel', 'Operating Income (' + ps + ')' + (isForecast[p] ? ' · Forecast' : ''));
+  const fc = isForecast[p] ? ' · Forecast' : '';
+  setText('kpiOpIncLabel', 'Operating Income (' + ps + ')' + fc);
   setText('kpiOpInc', fmtUSD(opInc));
   setText('kpiOpIncSub', om.toFixed(1) + '% margin');
+  setText('kpiOpMarginLabel', 'Op Margin (' + ps + ')' + fc);
   setText('kpiOpMargin', om.toFixed(1) + '%');
+  setText('kpiGrossMarginLabel', 'Gross Margin (' + ps + ')' + fc);
   setText('kpiGrossMargin', gm.toFixed(1) + '%');
+  setText('kpiNetMarginLabel', 'Net Margin (' + ps + ')' + fc);
   setText('kpiNetMargin', om.toFixed(1) + '%');
 }
 
