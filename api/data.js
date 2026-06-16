@@ -310,11 +310,12 @@ async function fetchInvoicingData(sheets, tab, forcedSource) {
     const placedSalary = cols.monthlySalary >= 0 ? num(row[cols.monthlySalary]) : 0;
     const finalAmountNative = cols.invoiceAmount    >= 0 ? num(row[cols.invoiceAmount])    : 0;
     const finalAmountUSD    = cols.invoiceAmountUSD >= 0 ? num(row[cols.invoiceAmountUSD]) : 0;
-    // When the sheet has a dedicated "Amount USD" column, that's the source
-    // of truth for the dashboard's KPI display — mixed-currency rows aggregate
-    // correctly because everything's already pre-converted. When that column
-    // doesn't exist, fall back to the native Invoice Amount column.
-    const finalAmount = cols.invoiceAmountUSD >= 0 ? finalAmountUSD : finalAmountNative;
+    // Prefer the USD column when it has a value (so mixed-currency rows
+    // aggregate correctly), but fall back to the native Invoice Amount when
+    // the USD cell is blank/zero. Draft + pipeline rows usually have no USD
+    // conversion typed in yet — without this fallback they'd all count as $0,
+    // which is what zeroed out the Pipeline KPI despite 38 drafts.
+    const finalAmount = finalAmountUSD > 0 ? finalAmountUSD : finalAmountNative;
     const commissionStr = cols.commission >= 0 ? String(row[cols.commission] || '').trim() : '';
     const commissionPct = num(commissionStr);
     const deposit = cols.deposit >= 0 ? num(row[cols.deposit]) : 0;
