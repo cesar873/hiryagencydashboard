@@ -2081,22 +2081,40 @@ function setPmtMode(mode) {
 }
 
 // Parse "20/05/2026", "20-05-2026", "2026-05-20", "5/20/2026", or ISO into a Date.
+const PMT_MONTH_LOOKUP = {
+  jan:0, january:0, feb:1, february:1, mar:2, march:2, apr:3, april:3,
+  may:4, jun:5, june:5, jul:6, july:6, aug:7, august:7, sep:8, sept:8,
+  september:8, oct:9, october:9, nov:10, november:10, dec:11, december:11
+};
 function parseDDMMYYYY(s) {
   if (!s) return null;
   const v = String(s).trim();
-  let m = v.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  // ISO: 2026-05-15  (also tolerates a trailing time)
+  let m = v.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
   if (m) return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+  // Numeric DMY / MDY: 15/05/2026 or 5/15/2026
   m = v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
   if (m) {
-    // Ambiguous between MDY and DMY. Hiry uses DMY in the sheet, but the
-    // Bookkeeping tab dates may come through as YYYY-MM-DD already (handled above)
-    // or as M/D/YYYY from QBO exports. Prefer DMY when the first part is > 12.
     const a = parseInt(m[1]), b = parseInt(m[2]), y = parseInt(m[3]);
     if (a > 12) return new Date(y, b - 1, a);   // definitely DMY
     if (b > 12) return new Date(y, a - 1, b);   // definitely MDY
     return new Date(y, b - 1, a);               // default DMY (Hiry convention)
   }
-  return null;
+  // Month-name forms: "May 5, 2026" · "May 5 2026" · "5 May 2026" · "May 2026"
+  const lc = v.toLowerCase().replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+  // "May 5 2026" or "May 2026"
+  m = lc.match(/^([a-z]+)\.?\s+(?:(\d{1,2})\s+)?(\d{4})$/);
+  if (m && PMT_MONTH_LOOKUP[m[1]] != null) {
+    return new Date(parseInt(m[3]), PMT_MONTH_LOOKUP[m[1]], m[2] ? parseInt(m[2]) : 1);
+  }
+  // "5 May 2026"
+  m = lc.match(/^(\d{1,2})\s+([a-z]+)\.?\s+(\d{4})$/);
+  if (m && PMT_MONTH_LOOKUP[m[2]] != null) {
+    return new Date(parseInt(m[3]), PMT_MONTH_LOOKUP[m[2]], parseInt(m[1]));
+  }
+  // Last resort: let the engine try (handles e.g. full timestamps). Reject NaN.
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
 }
 
 // Format helpers
