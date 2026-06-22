@@ -2187,9 +2187,13 @@ function pmtGetRangeMonthKeys() {
   const s = (typeof filterState !== 'undefined' && filterState) ? filterState.rangeStart : 0;
   const e = (typeof filterState !== 'undefined' && filterState) ? filterState.rangeEnd : MONTHS.length - 1;
   const out = [];
+  const seen = new Set();
   for (let i = s; i <= e; i++) {
     const r = pmtMonthLabelToRange(MONTHS[i]);
-    if (r) out.push(r.key);
+    // Dedup by month key — if the sheet's P&L header has two columns that
+    // resolve to the same month (e.g. a duplicate June), the AR grid still
+    // shows one column for it instead of two.
+    if (r && !seen.has(r.key)) { seen.add(r.key); out.push(r.key); }
   }
   return out;
 }
