@@ -765,6 +765,111 @@ async function fetchSheetData() {
     if (monthsArr.some(v => Math.abs(v) > 0.5)) EXP_BY_CAT_PL.push({ cat, grp: 'OpEx', months: monthsArr });
   }
 
+  // ── Accrual Finance Model ────────────────────────────────────
+  // Parallel P&L on an accrual basis. Read the "Accrual Finance Model" tab the
+  // same way as the cash P&L, but align its values to the cash MONTHS window
+  // by month LABEL (not column position) so the two bases line up even if the
+  // accrual tab's columns sit at different offsets. Returns null if the tab
+  // isn't present, and the frontend silently falls back to cash.
+  //
+  // buildPLBundleFromRow takes a getRow(label) -> month-aligned array, and
+  // assembles the same array shape the cash path produces. Shared so the
+  // derivations (ads/travel aggregation, margins, category table) stay
+  // identical across both bases.
+  function buildPLBundleFromRow(getRow) {
+    const tRev   = getRow('Total Revenue');
+    const cliRev = getRow('Client Revenue');
+    const canRev = getRow('Candidate Revenue');
+    const cTalent = getRow('Talent Acquisition');
+    const cCSM    = getRow('Customer Success Manager');
+    const cInt    = getRow('Interviewers & Talent Partners');
+    const cFreel  = getRow('Freelancers (COGS)');
+    const cRef    = getRow('Referral Fee Expense');
+    const cogsT   = getRow('TOTAL COST OF SALES');
+    const oSoft   = getRow('Software & Subscriptions');
+    const oRecruit= getRow('Software & Subscriptions - Recruitment');
+    const oStripe = getRow('Stripe Fees');
+    const oGMA    = getRow('Google & Meta Ads');
+    const oOther  = getRow('Other Ads & Marketing');
+    const oTravelR= getRow('Travel');
+    const oHotel  = getRow('Hotel & Lodging');
+    const oMeals  = getRow('Meals & Entertainment');
+    const opexT   = getRow('TOTAL OPERATING EXPENSES');
+    const oAds    = oGMA.map((v, i) => v + oOther[i]);
+    const oTravel = oTravelR.map((v, i) => v + oHotel[i] + oMeals[i]);
+    const oOtherCat = opexT.map((v, i) => Math.max(0, v - oSoft[i] - oRecruit[i] - oStripe[i] - oAds[i] - oTravel[i]));
+    const opInc   = getRow('OPERATING INCOME');
+    const opMRaw  = getRow('OPERATING MARGIN');
+    const opM     = opMRaw.map(v => (v !== 0 && Math.abs(v) <= 1.5) ? +(v * 100).toFixed(2) : +v.toFixed(2));
+    const gM      = tRev.map((r, i) => r > 0 ? +(((r - cogsT[i]) / r) * 100).toFixed(1) : 0);
+    const expCat = [];
+    for (const cat of COGS_CATEGORIES) {
+      const arr = getRow(cat);
+      if (arr.some(v => Math.abs(v) > 0.5)) expCat.push({ cat, grp: 'COGS', months: arr });
+    }
+    for (const cat of OPEX_CATEGORIES) {
+      const arr = getRow(cat);
+      if (arr.some(v => Math.abs(v) > 0.5)) expCat.push({ cat, grp: 'OpEx', months: arr });
+    }
+    return {
+      totalRev: tRev, clientRev: cliRev, candidateRev: canRev,
+      cogsTalent: cTalent, cogsCSM: cCSM, cogsInt: cInt, cogsFreel: cFreel, cogsRef: cRef, cogs: cogsT,
+      opexSoftware: oSoft, opexRecruit: oRecruit, opexStripe: oStripe, opexAds: oAds, opexTravel: oTravel, opexOther: oOtherCat, opex: opexT,
+      operatingInc: opInc, opMargin: opM, grossMargin: gM,
+      EXP_BY_CAT_PL: expCat
+    };
+  }
+
+  let accrual = null;
+  let accrualMeta = { tab: null, error: null };
+  const accrualTab = tabs.find(t => /accrual.*finance.*model/i.test(t))
+                  || tabs.find(t => /accrual.*model/i.test(t))
+                  || tabs.find(t => /accrual.*p\s*&?\s*l/i.test(t))
+                  || tabs.find(t => /accrual/i.test(t));
+  if (accrualTab) {
+    try {
+      const aRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: SHEET_ID,
+        range: `'${accrualTab}'!A1:Z500`,
+        valueRenderOption: 'FORMATTED_VALUE'
+      });
+      const aRows = aRes.data.values || [];
+      // Find the accrual header row + its month columns (by label)
+      let aLabelToCol = null;
+      for (let i = 0; i < Math.min(aRows.length, 40); i++) {
+        const row = aRows[i] || [];
+        const map = {};
+        let hits = 0;
+        for (let c = 0; c < row.length; c++) {
+          const parsed = parseMonthCell(row[c]);
+          if (parsed) {
+            const label = `${parsed.monShort} ${String(parsed.year4).slice(2)}`;
+            if (map[label] == null) map[label] = c; // first wins; dedup like cash
+            hits++;
+          }
+        }
+        if (hits >= 6) { aLabelToCol = map; break; }
+      }
+      if (!aLabelToCol) {
+        accrualMeta.error = 'No month header row found in accrual tab';
+      } else {
+        const getAccrualRow = (label) => {
+          const row = rowByLabel(aRows, label);
+          return months.map(ml => {
+            const c = aLabelToCol[ml];
+            return (row && c != null) ? num(row[c]) : 0;
+          });
+        };
+        accrual = buildPLBundleFromRow(getAccrualRow);
+        accrualMeta.tab = accrualTab;
+      }
+    } catch (e) {
+      accrualMeta.error = 'Accrual read failed: ' + e.message;
+    }
+  } else {
+    accrualMeta.error = 'No Accrual Finance Model tab found';
+  }
+
   // ── Transactions tab: MOM_DATA + activeClients90d + transaction lists ──
   let MOM_DATA = { months, revenue: [], expenses: [] };
   let activeClients90d = new Array(months.length).fill(0);
@@ -861,6 +966,7 @@ async function fetchSheetData() {
     budget,
     receivables,
     bookkeeping,
+    accrual,
     _meta: {
       fetchedAt: new Date().toISOString(),
       incomeTab,
@@ -875,7 +981,8 @@ async function fetchSheetData() {
       receivables: receivables.meta,
       bookkeeping: bookkeeping.meta,
       invoicingTabs: receivables.tabs,
-      bookkeepingTab: bookkeeping.tab
+      bookkeepingTab: bookkeeping.tab,
+      accrual: accrualMeta
     }
   };
 }

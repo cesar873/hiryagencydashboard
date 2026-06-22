@@ -497,6 +497,16 @@ tr:last-child td { border-bottom: none; }
 <!-- ══════════════════════════════ REVENUE ══ -->
 <div id="revenue" class="page">
 
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+    <div style="display:inline-flex;align-items:center;gap:8px">
+      <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Basis</span>
+      <div style="display:inline-flex;background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:8px;padding:3px;gap:2px">
+        <button id="basis-revenue-accrual" onclick="setBasis('revenue','accrual')" style="background:#1390eb;color:#fff;border:none;padding:5px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.4px">Accrual</button>
+        <button id="basis-revenue-cash" onclick="setBasis('revenue','cash')" style="background:transparent;color:rgba(255,255,255,0.7);border:none;padding:5px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.4px">Cash</button>
+      </div>
+    </div>
+  </div>
+
   <div id="revInsights" class="insights"></div>
   <div class="kpi-grid gap">
     <div class="kpi">
@@ -855,6 +865,16 @@ tr:last-child td { border-bottom: none; }
 <!-- ══════════════════════════════ FINANCIALS ══ -->
 <div id="financials" class="page active">
 
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+    <div style="display:inline-flex;align-items:center;gap:8px">
+      <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Basis</span>
+      <div style="display:inline-flex;background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:8px;padding:3px;gap:2px">
+        <button id="basis-financials-accrual" onclick="setBasis('financials','accrual')" style="background:#1390eb;color:#fff;border:none;padding:5px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.4px">Accrual</button>
+        <button id="basis-financials-cash" onclick="setBasis('financials','cash')" style="background:transparent;color:rgba(255,255,255,0.7);border:none;padding:5px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.4px">Cash</button>
+      </div>
+    </div>
+  </div>
+
   <div id="finInsights" class="insights"></div>
   <div class="kpi-grid gap">
     <div class="kpi">
@@ -1206,6 +1226,17 @@ let RECEIVABLES = { invoices: [], totals: {}, meta: {} };
 let BOOKKEEPING = { coa: [], transactions: [], meta: { awaitingCount: 0 } };
 let isForecast = []; // per-month boolean — true = forecast/projection, false = actuals
 
+// ── Cash / Accrual basis ───────────────────────────────────────
+// Two bundles of P&L arrays; per-tab basis selects which the Financials and
+// Revenue render paths read. Default to accrual (set to cash if the Accrual
+// Finance Model tab is missing — handled in applyData).
+let CASH_BUNDLE = null;
+let ACCRUAL_BUNDLE = null;
+let finBasis = 'accrual';   // Financials tab basis
+let revBasis = 'accrual';   // Revenue tab basis
+function finBundle() { return (finBasis === 'accrual' && ACCRUAL_BUNDLE) ? ACCRUAL_BUNDLE : (CASH_BUNDLE || {}); }
+function revBundle() { return (revBasis === 'accrual' && ACCRUAL_BUNDLE) ? ACCRUAL_BUNDLE : (CASH_BUNDLE || {}); }
+
 // ── Forecast styling helpers (used by all charts) ─────────────
 // Per-bar background color: full opacity for actuals, faded for forecast
 function barColors(baseRGBA, fadedAlpha) {
@@ -1265,6 +1296,39 @@ function buildCharts(tabId) {
       const el = document.getElementById(id);
       if (el) chartRegistry[id] = new Chart(el, chartFactories[id]());
     }
+  });
+}
+
+// ── Cash / Accrual toggle ──────────────────────────────────────
+function setBasis(tab, basis) {
+  if (basis === 'accrual' && !ACCRUAL_BUNDLE) basis = 'cash'; // no accrual data → stay cash
+  if (tab === 'financials') finBasis = basis; else revBasis = basis;
+  syncBasisToggleUI();
+  // Re-render everything that reads a bundle. updateKPIs + renderPLTable +
+  // renderInsights re-read finBundle()/revBundle(); applyRangeToCharts
+  // re-runs the chart factories (which also re-read the bundles).
+  if (typeof updateKPIs === 'function') updateKPIs();
+  if (typeof rebuildStaticKPIs === 'function') rebuildStaticKPIs();
+  if (typeof renderPLTable === 'function') renderPLTable();
+  if (typeof renderInsights === 'function') renderInsights();
+  if (typeof applyRangeToCharts === 'function') applyRangeToCharts();
+}
+// Reflect current basis on both toggles (and disable accrual if unavailable).
+function syncBasisToggleUI() {
+  [['financials', finBasis], ['revenue', revBasis]].forEach(([tab, basis]) => {
+    ['accrual', 'cash'].forEach(b => {
+      const btn = document.getElementById(`basis-${tab}-${b}`);
+      if (!btn) return;
+      const active = basis === b;
+      btn.style.background = active ? '#1390eb' : 'transparent';
+      btn.style.color = active ? '#fff' : 'rgba(255,255,255,0.7)';
+      if (b === 'accrual') {
+        const avail = !!ACCRUAL_BUNDLE;
+        btn.style.opacity = avail ? '1' : '0.4';
+        btn.style.cursor = avail ? 'pointer' : 'not-allowed';
+        btn.title = avail ? '' : 'No Accrual Finance Model tab found';
+      }
+    });
   });
 }
 
@@ -1422,12 +1486,16 @@ function updateKPIs() {
   }
   pill.style.display = isForecast[p] ? 'inline-block' : 'none';
 
-  // Revenue tab
+  // Revenue tab — reads the basis the Revenue toggle is set to.
+  // NOTE: `rev` (cash) stays the basis for the Expenses "% of revenue" math
+  // below; only the Revenue KPI itself follows the Revenue toggle.
   const rev = totalRev[p] || 0;
-  const revPrior = p > 0 ? (totalRev[p-1] || 0) : 0;
-  const revDelta = revPrior > 0 ? ((rev - revPrior) / revPrior * 100) : 0;
+  const revD = revBundle();
+  const revKpi = (revD.totalRev && revD.totalRev[p]) || 0;
+  const revKpiPrior = p > 0 ? ((revD.totalRev && revD.totalRev[p-1]) || 0) : 0;
+  const revDelta = revKpiPrior > 0 ? ((revKpi - revKpiPrior) / revKpiPrior * 100) : 0;
   setText('kpiRevPeriodLabel', pl + ' Revenue' + fcSuffix);
-  setText('kpiRevPeriod', fmtUSD(rev));
+  setText('kpiRevPeriod', fmtUSD(revKpi));
   // Active Clients (trailing 90d ending at selected period)
   if (typeof activeClients90d !== 'undefined') {
     setText('kpiActiveClientsLabel', 'Active Clients (90d ending ' + ps + ')');
@@ -1468,10 +1536,11 @@ function updateKPIs() {
     setText('kpiTopVendorSub', bestV > 0 ? (fmtUSD(bestV) + ' · ' + bestCat) : 'No vendor activity');
   }
 
-  // Financials tab
-  const opInc = operatingInc[p] || 0;
-  const gm = grossMargin[p] || 0;
-  const om = opMargin[p] || 0;
+  // Financials tab — reads the basis the Financials toggle is set to
+  const finD = finBundle();
+  const opInc = (finD.operatingInc && finD.operatingInc[p]) || 0;
+  const gm = (finD.grossMargin && finD.grossMargin[p]) || 0;
+  const om = (finD.opMargin && finD.opMargin[p]) || 0;
   const fc = isForecast[p] ? ' · Forecast' : '';
   setText('kpiOpIncLabel', 'Operating Income (' + ps + ')' + fc);
   setText('kpiOpInc', fmtUSD(opInc));
@@ -1495,14 +1564,20 @@ function renderInsights() {
   const ps = periodShort(p);
   const s = filterState.rangeStart, e = filterState.rangeEnd;
 
-  // Revenue insights
+  // Revenue insights — revenue figures follow the Revenue toggle, margins
+  // follow the Financials toggle. `revCash` stays cash for the Expenses
+  // OpEx-%-of-revenue line below.
+  const _revD = revBundle(), _finD = finBundle();
+  const revTotalArr = _revD.totalRev || [], revClientArr = _revD.clientRev || [], revCandArr = _revD.candidateRev || [];
+  const finTotalArr = _finD.totalRev || [];
   const revInsights = [];
-  const rev = totalRev[p];
-  const om = opMargin[p];
-  const gm = grossMargin[p];
+  const rev = revTotalArr[p] || 0;
+  const revCash = totalRev[p] || 0;
+  const om = (_finD.opMargin && _finD.opMargin[p]) || 0;
+  const gm = (_finD.grossMargin && _finD.grossMargin[p]) || 0;
 
   if (p > 0) {
-    const dRev = ((rev - totalRev[p-1]) / totalRev[p-1] * 100);
+    const dRev = ((rev - (revTotalArr[p-1] || 0)) / (revTotalArr[p-1] || 1) * 100);
     if (dRev >= 5) {
       revInsights.push({ icon: 'good', text: `Revenue up <b>+${dRev.toFixed(1)}%</b> vs prior month — momentum holding.` });
     } else if (dRev <= -10) {
@@ -1522,8 +1597,8 @@ function renderInsights() {
   }
 
   // Client/Candidate mix
-  const cR = clientRev[p] || 0;
-  const caR = candidateRev[p] || 0;
+  const cR = revClientArr[p] || 0;
+  const caR = revCandArr[p] || 0;
   if (rev > 0) {
     const cPct = (cR/rev*100).toFixed(0);
     revInsights.push({ icon: 'neu', text: `Mix: <b>${cPct}% Client</b> / <b>${100-cPct}% Candidate</b> revenue this period.` });
@@ -1559,9 +1634,9 @@ function renderInsights() {
   if (topCat && topCat[1] > 0) {
     expInsights.push({ icon: 'warn', text: `Largest spend category: <b>${escapeHtml(topCat[0])}</b> at <b>${fmtUSD(topCat[1])}</b>.` });
   }
-  // OpEx as % of revenue
-  if (rev > 0 && opex[p]) {
-    const oPct = (opex[p]/rev*100).toFixed(1);
+  // OpEx as % of revenue (cash basis — Expenses tab has no toggle)
+  if (revCash > 0 && opex[p]) {
+    const oPct = (opex[p]/revCash*100).toFixed(1);
     expInsights.push({ icon: 'neu', text: `OpEx is <b>${oPct}%</b> of revenue this period.` });
   }
   renderInsightBox('expInsights', ps, expInsights);
@@ -1582,13 +1657,14 @@ function renderInsights() {
   } else {
     finInsights.push({ icon: 'good', text: `Gross margin <b>${gm.toFixed(1)}%</b> in line with TTM avg.` });
   }
-  // Best month in range
+  // Best month in range (financials basis)
   let bestIdx = s, bestRev = -Infinity;
-  for (let i = s; i <= e; i++) if (totalRev[i] > bestRev) { bestRev = totalRev[i]; bestIdx = i; }
+  for (let i = s; i <= e; i++) if ((finTotalArr[i] || 0) > bestRev) { bestRev = finTotalArr[i] || 0; bestIdx = i; }
   finInsights.push({ icon: 'neu', text: `Best revenue month in range: <b>${MONTHS[bestIdx]}</b> at <b>${fmtUSD(bestRev)}</b>.` });
   // Range total
   let rangeRev = 0, rangeOpInc = 0;
-  for (let i = s; i <= e; i++) { rangeRev += totalRev[i] || 0; rangeOpInc += operatingInc[i] || 0; }
+  const finOpInc = _finD.operatingInc || [];
+  for (let i = s; i <= e; i++) { rangeRev += finTotalArr[i] || 0; rangeOpInc += finOpInc[i] || 0; }
   finInsights.push({ icon: 'neu', text: `Range total: <b>${fmtUSD(rangeRev)}</b> revenue · <b>${fmtUSD(rangeOpInc)}</b> operating income.` });
   renderInsightBox('finInsights', ps, finInsights);
 }
@@ -1909,6 +1985,24 @@ function applyData(D) {
   BUDGET = D.budget || { months: [], byMonth: {}, meta: {} };
   RECEIVABLES = D.receivables || { invoices: [], totals: {}, meta: {} };
   BOOKKEEPING = D.bookkeeping || { coa: [], transactions: [], meta: { awaitingCount: 0 } };
+
+  // ── Cash / Accrual basis bundles ───────────────────────────────
+  // CASH_BUNDLE mirrors the live globals (the cash P&L). ACCRUAL_BUNDLE comes
+  // from the Accrual Finance Model tab (null if that tab is absent). The
+  // Financials + Revenue render paths resolve which bundle to read via
+  // finBundle() / revBundle(); everything else keeps reading the cash globals.
+  CASH_BUNDLE = {
+    totalRev, clientRev, candidateRev, cogs, opex,
+    cogsTalent, cogsCSM, cogsInt, cogsFreel, cogsRef,
+    opexSoftware, opexRecruit, opexStripe, opexAds, opexTravel, opexOther,
+    operatingInc, grossMargin, opMargin, EXP_BY_CAT_PL
+  };
+  ACCRUAL_BUNDLE = D.accrual || null;
+  // If the accrual tab is missing, fall the toggles back to cash so the tabs
+  // still render rather than showing blanks.
+  if (!ACCRUAL_BUNDLE) { finBasis = 'cash'; revBasis = 'cash'; }
+  syncBasisToggleUI();
+
   rebuildFilterDropdowns();
   rebuildStaticKPIs();
   renderPayments();
@@ -1920,6 +2014,13 @@ function renderPLTable() {
   const tbl = document.getElementById('plTable');
   if (!tbl || !MONTHS || MONTHS.length === 0) return;
   const n = MONTHS.length;
+  // Resolve the Financials basis once and shadow the shared globals locally so
+  // the table body reads cash or accrual without per-reference edits.
+  const _d = finBundle();
+  const totalRev = _d.totalRev || [], clientRev = _d.clientRev || [], candidateRev = _d.candidateRev || [];
+  const cogs = _d.cogs || [], cogsTalent = _d.cogsTalent || [], cogsCSM = _d.cogsCSM || [], cogsInt = _d.cogsInt || [], cogsFreel = _d.cogsFreel || [], cogsRef = _d.cogsRef || [];
+  const opex = _d.opex || [], opexSoftware = _d.opexSoftware || [], opexRecruit = _d.opexRecruit || [], opexStripe = _d.opexStripe || [], opexAds = _d.opexAds || [], opexTravel = _d.opexTravel || [], opexOther = _d.opexOther || [];
+  const operatingInc = _d.operatingInc || [], grossMargin = _d.grossMargin || [], opMargin = _d.opMargin || [];
   const sub = document.getElementById('plSub');
   if (sub) sub.textContent = `Revenue, COGS, gross profit, OpEx, and operating income — ${MONTHS[0]} to ${MONTHS[n-1]}`;
 
@@ -3195,14 +3296,16 @@ function rebuildFilterDropdowns() {
 }
 
 function rebuildStaticKPIs() {
-  // TTM Revenue + Revenue Mix labels — computed from last 12 months of data
+  // TTM Revenue + Revenue Mix — follow the Revenue tab basis (cash/accrual).
   const n = MONTHS.length;
   const start = Math.max(0, n - 12);
+  const _rd = revBundle();
+  const _tRev = _rd.totalRev || [], _cRev = _rd.clientRev || [], _caRev = _rd.candidateRev || [];
   let ttmRev = 0, ttmClient = 0, ttmCand = 0;
   for (let i = start; i < n; i++) {
-    ttmRev += totalRev[i] || 0;
-    ttmClient += clientRev[i] || 0;
-    ttmCand += candidateRev[i] || 0;
+    ttmRev += _tRev[i] || 0;
+    ttmClient += _cRev[i] || 0;
+    ttmCand += _caRev[i] || 0;
   }
   const ttmLabelEl = document.querySelector('.period-badge');
   if (ttmLabelEl && n > 0) ttmLabelEl.textContent = `TTM: ${MONTHS[start]} – ${MONTHS[n-1]}`;
@@ -3283,8 +3386,8 @@ defChart('revenue', 'revTypeChart', () => ({
   data: {
     labels: MONTHS,
     datasets: [
-      { label: 'Client Revenue',    data: clientRev,    backgroundColor: barColors('rgba(19,144,235,0.75)'), borderRadius: 3, stack: 'rev' },
-      { label: 'Candidate Revenue', data: candidateRev, backgroundColor: barColors('rgba(34,197,94,0.65)'),  borderRadius: 3, stack: 'rev' }
+      { label: 'Client Revenue',    data: revBundle().clientRev || [],    backgroundColor: barColors('rgba(19,144,235,0.75)'), borderRadius: 3, stack: 'rev' },
+      { label: 'Candidate Revenue', data: revBundle().candidateRev || [], backgroundColor: barColors('rgba(34,197,94,0.65)'),  borderRadius: 3, stack: 'rev' }
     ]
   },
   options: {
@@ -3324,8 +3427,8 @@ defChart('financials', 'revVsOpChart', () => ({
   data: {
     labels: MONTHS,
     datasets: [
-      { type: 'bar', label: 'Revenue', data: totalRev, backgroundColor: barColors('rgba(19,144,235,0.3)', 0.1), borderRadius: 3, yAxisID: 'y' },
-      { type: 'line', label: 'Operating Income', data: operatingInc,
+      { type: 'bar', label: 'Revenue', data: finBundle().totalRev || [], backgroundColor: barColors('rgba(19,144,235,0.3)', 0.1), borderRadius: 3, yAxisID: 'y' },
+      { type: 'line', label: 'Operating Income', data: finBundle().operatingInc || [],
         borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', tension: 0.35,
         pointRadius: pointRadiusForForecast(3), borderWidth: 2, fill: true, yAxisID: 'y',
         segment: { borderDash: ctx => lineSegmentDash(ctx) } }
@@ -3355,10 +3458,10 @@ defChart('financials', 'marginChart', () => ({
   data: {
     labels: MONTHS,
     datasets: [
-      { label: 'Gross Margin', data: grossMargin, borderColor: '#1390eb', backgroundColor: 'rgba(19,144,235,0.1)',
+      { label: 'Gross Margin', data: finBundle().grossMargin || [], borderColor: '#1390eb', backgroundColor: 'rgba(19,144,235,0.1)',
         tension: 0.35, pointRadius: pointRadiusForForecast(3), borderWidth: 2,
         segment: { borderDash: ctx => lineSegmentDash(ctx) } },
-      { label: 'Op. Margin',   data: opMargin,   borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.08)',
+      { label: 'Op. Margin',   data: finBundle().opMargin || [],   borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.08)',
         tension: 0.35, pointRadius: pointRadiusForForecast(3), borderWidth: 2,
         segment: { borderDash: ctx => lineSegmentDash(ctx) } }
     ]
