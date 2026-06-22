@@ -579,7 +579,7 @@ async function fetchSheetData() {
   const txnTab = txnScanOrder.find(t => TXN_CANDIDATES.some(pat => pat.test(t)));
 
   const headerRow = incomeRows[headerRowIdx];
-  const monthCols = []; // { colIdx, shortLabel, fullLabel }
+  let monthCols = []; // { colIdx, sortKey, shortLabel, fullLabel }
 
   // Parse any cell that represents a month → returns { monShort: "Apr", year4: 2026 } or null
   function parseMonthCell(v) {
@@ -623,12 +623,34 @@ async function fetchSheetData() {
       const monFullIdx = MONTH_SHORT.indexOf(parsed.monShort);
       monthCols.push({
         colIdx: c,
+        sortKey: parsed.year4 * 12 + monFullIdx,
         shortLabel: `${parsed.monShort} ${yrShort}`,
         fullLabel: `${MONTH_FULL[monFullIdx]} ${parsed.year4}`
       });
     }
   }
   if (monthCols.length === 0) throw new Error('No month columns parsed from header row');
+
+  // Dedup month columns — if the P&L header has two columns resolving to the
+  // same month (e.g. a stray duplicate June), keep ONE so the dropdown and
+  // every tab show that month once. On a collision keep the column that has a
+  // Total Revenue value (the populated one wins over an empty placeholder);
+  // if neither/both have data, keep the rightmost (most recently added).
+  (function dedupMonthCols() {
+    const totalRevRow = rowByLabel(incomeRows, 'Total Revenue') || [];
+    const hasData = mc => num(totalRevRow[mc.colIdx]) !== 0;
+    const byLabel = new Map();
+    for (const mc of monthCols) {
+      const prev = byLabel.get(mc.shortLabel);
+      if (!prev) { byLabel.set(mc.shortLabel, mc); continue; }
+      // Prefer the data-bearing column; tie → keep the later (higher colIdx).
+      if (hasData(mc) && !hasData(prev)) byLabel.set(mc.shortLabel, mc);
+      else if (hasData(mc) === hasData(prev) && mc.colIdx > prev.colIdx) byLabel.set(mc.shortLabel, mc);
+    }
+    if (byLabel.size !== monthCols.length) {
+      monthCols = Array.from(byLabel.values()).sort((a, b) => a.sortKey - b.sortKey || a.colIdx - b.colIdx);
+    }
+  })();
 
   // Helper: pull a row by label, mapped to monthCols
   function getMonthlyRow(label) {
