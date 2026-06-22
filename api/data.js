@@ -862,6 +862,26 @@ async function fetchSheetData() {
         };
         accrual = buildPLBundleFromRow(getAccrualRow);
         accrualMeta.tab = accrualTab;
+
+        // Accrual basis only begins May 2026 — blank every month before that
+        // (set to null) so charts gap and the P&L table shows "—" rather than
+        // implying $0 of accrual activity in months that predate the basis.
+        const ACCRUAL_START_YM = 2026 * 12 + 4; // May 2026 (month index 4)
+        const beforeStart = months.map(ml => {
+          const parsed = parseMonthCell(ml);
+          if (!parsed) return false;
+          const mi = MONTH_SHORT.indexOf(parsed.monShort);
+          return (parsed.year4 * 12 + mi) < ACCRUAL_START_YM;
+        });
+        const blankPre = arr => Array.isArray(arr) ? arr.map((v, i) => beforeStart[i] ? null : v) : arr;
+        for (const k of Object.keys(accrual)) {
+          if (k === 'EXP_BY_CAT_PL') {
+            accrual[k] = (accrual[k] || []).map(r => ({ ...r, months: blankPre(r.months) }));
+          } else {
+            accrual[k] = blankPre(accrual[k]);
+          }
+        }
+        accrualMeta.startsAt = 'May 2026';
       }
     } catch (e) {
       accrualMeta.error = 'Accrual read failed: ' + e.message;

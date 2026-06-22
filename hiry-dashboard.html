@@ -501,8 +501,8 @@ tr:last-child td { border-bottom: none; }
     <div style="display:inline-flex;align-items:center;gap:8px">
       <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Basis</span>
       <div style="display:inline-flex;background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:8px;padding:3px;gap:2px">
-        <button id="basis-revenue-accrual" onclick="setBasis('revenue','accrual')" style="background:#1390eb;color:#fff;border:none;padding:5px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.4px">Accrual</button>
-        <button id="basis-revenue-cash" onclick="setBasis('revenue','cash')" style="background:transparent;color:rgba(255,255,255,0.7);border:none;padding:5px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.4px">Cash</button>
+        <button id="basis-revenue-accrual" onclick="setBasis('revenue','accrual')" style="background:transparent;color:rgba(255,255,255,0.7);border:none;padding:5px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.4px">Accrual</button>
+        <button id="basis-revenue-cash" onclick="setBasis('revenue','cash')" style="background:#1390eb;color:#fff;border:none;padding:5px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.4px">Cash</button>
       </div>
     </div>
   </div>
@@ -869,8 +869,8 @@ tr:last-child td { border-bottom: none; }
     <div style="display:inline-flex;align-items:center;gap:8px">
       <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Basis</span>
       <div style="display:inline-flex;background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:8px;padding:3px;gap:2px">
-        <button id="basis-financials-accrual" onclick="setBasis('financials','accrual')" style="background:#1390eb;color:#fff;border:none;padding:5px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.4px">Accrual</button>
-        <button id="basis-financials-cash" onclick="setBasis('financials','cash')" style="background:transparent;color:rgba(255,255,255,0.7);border:none;padding:5px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.4px">Cash</button>
+        <button id="basis-financials-accrual" onclick="setBasis('financials','accrual')" style="background:transparent;color:rgba(255,255,255,0.7);border:none;padding:5px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.4px">Accrual</button>
+        <button id="basis-financials-cash" onclick="setBasis('financials','cash')" style="background:#1390eb;color:#fff;border:none;padding:5px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.4px">Cash</button>
       </div>
     </div>
   </div>
@@ -1232,8 +1232,8 @@ let isForecast = []; // per-month boolean — true = forecast/projection, false 
 // Finance Model tab is missing — handled in applyData).
 let CASH_BUNDLE = null;
 let ACCRUAL_BUNDLE = null;
-let finBasis = 'accrual';   // Financials tab basis
-let revBasis = 'accrual';   // Revenue tab basis
+let finBasis = 'cash';      // Financials tab basis (default cash)
+let revBasis = 'cash';      // Revenue tab basis (default cash)
 function finBundle() { return (finBasis === 'accrual' && ACCRUAL_BUNDLE) ? ACCRUAL_BUNDLE : (CASH_BUNDLE || {}); }
 function revBundle() { return (revBasis === 'accrual' && ACCRUAL_BUNDLE) ? ACCRUAL_BUNDLE : (CASH_BUNDLE || {}); }
 
