@@ -2736,7 +2736,7 @@ function renderArGrid(invoices) {
   if (months.length === 0) {
     const monthSet = new Set();
     for (const inv of invoices) {
-      const k = pmtMonthYearKey(inv.dueDate || inv.invoiceDate);
+      const k = pmtMonthYearKey(inv.invoiceDate || inv.dueDate);
       if (k) monthSet.add(k);
     }
     months = Array.from(monthSet).sort();
@@ -2761,7 +2761,7 @@ function renderArGrid(invoices) {
     if (statusFilter && inv._effectiveState !== statusFilter) continue;
     const name = partyOf(inv);
     if (searchTerm && !name.toLowerCase().includes(searchTerm)) continue;
-    const k = pmtMonthYearKey(inv.dueDate || inv.invoiceDate);
+    const k = pmtMonthYearKey(inv.invoiceDate || inv.dueDate);
     if (!k) continue;
     if (!byClient[name]) byClient[name] = { months: {}, total: 0, openTotal: 0, currency: inv.currency || 'USD', source: inv.service || '' };
     const c = byClient[name];
@@ -2855,7 +2855,7 @@ function openArCellDetail(clientName, monthKey) {
     : (inv.client || inv.candidate || '—');
   const matching = ((typeof RECEIVABLES !== 'undefined' && RECEIVABLES.invoices) || []).filter(inv => {
     if (partyOf(inv) !== clientName) return false;
-    return pmtMonthYearKey(inv.dueDate || inv.invoiceDate) === monthKey;
+    return pmtMonthYearKey(inv.invoiceDate || inv.dueDate) === monthKey;
   });
   const pop = document.getElementById('pmtDetailPop');
   if (!pop) return;
