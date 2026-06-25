@@ -2986,24 +2986,48 @@ function closeStatusPopover() {
   if (pop) pop.style.display = 'none';
   pmtStatusPopState = null;
 }
+// POST JSON with a hard timeout so a save can never hang forever. Without
+// this, a cold serverless start or a slow Sheets call left the "Saving…"
+// button stuck because the fetch promise never settled. On timeout we abort
+// and surface a message — the write may have landed, so the user refreshes.
+async function pmtFetchJSON(url, body, timeoutMs) {
+  timeoutMs = timeoutMs || 15000;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: ctrl.signal
+    });
+    let json = {};
+    try { json = await res.json(); } catch (_) { /* non-JSON / empty body */ }
+    if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
+    return json;
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      throw new Error('Timed out. Your change may still have saved — hit Refresh to check.');
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function saveStatusFromPopover() {
   const s = pmtStatusPopState;
   if (!s || !s.selected) { closeStatusPopover(); return; }
   const btn = document.getElementById('pmtStatusSaveBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
-    const res = await fetch('/api/status', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rowNumber: s.rowNumber, source: s.source, status: s.selected, verify: { candidate: s.candidate, client: s.client } })
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
+    await pmtFetchJSON('/api/status', { rowNumber: s.rowNumber, source: s.source, status: s.selected, verify: { candidate: s.candidate, client: s.client } });
     closeStatusPopover();
     setTimeout(() => forceReloadData && forceReloadData(), 400);
   } catch (e) {
     console.error('Status save failed:', e);
     alert('Status save failed: ' + e.message);
+  } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
   }
 }
@@ -3042,13 +3066,7 @@ async function pickCategory(category) {
   const s = pmtCategoryPopState;
   if (!s) return;
   try {
-    const res = await fetch('/api/category', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rowNumber: s.rowNumber, category, verify: { vendor: s.vendor, description: s.description } })
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
+    await pmtFetchJSON('/api/category', { rowNumber: s.rowNumber, category, verify: { vendor: s.vendor, description: s.description } });
     closeCategoryPopover();
     setTimeout(() => forceReloadData && forceReloadData(), 400);
   } catch (e) {
@@ -3088,18 +3106,13 @@ async function saveCommentFromPopover() {
   const btn = document.getElementById('pmtCommentSaveBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
-    const res = await fetch('/api/comment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rowNumber: s.rowNumber, comment, verify: { vendor: s.vendor, description: s.description } })
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
+    await pmtFetchJSON('/api/comment', { rowNumber: s.rowNumber, comment, verify: { vendor: s.vendor, description: s.description } });
     closeCommentPopover();
     setTimeout(() => forceReloadData && forceReloadData(), 400);
   } catch (e) {
     console.error('Comment save failed:', e);
     alert('Comment save failed: ' + e.message);
+  } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
   }
 }
@@ -3129,22 +3142,16 @@ async function saveNoteFromPopover() {
   const btn = document.getElementById('pmtCommentSaveBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
-    const res = await fetch('/api/note', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rowNumber: s.rowNumber, source: s.source, note, verify: { candidate: s.candidate, client: s.client } })
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
-    // Restore comment popover handler for next open
-    if (btn) btn.onclick = saveCommentFromPopover;
+    await pmtFetchJSON('/api/note', { rowNumber: s.rowNumber, source: s.source, note, verify: { candidate: s.candidate, client: s.client } });
     pmtNotePopState = null;
     closeCommentPopover();
     setTimeout(() => forceReloadData && forceReloadData(), 400);
   } catch (e) {
     console.error('Note save failed:', e);
     alert('Note save failed: ' + e.message);
-    if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
+  } finally {
+    // Always restore the button + the default comment handler for next open.
+    if (btn) { btn.disabled = false; btn.textContent = 'Save'; btn.onclick = saveCommentFromPopover; }
   }
 }
 
@@ -3245,13 +3252,7 @@ document.addEventListener('click', (e) => {
 async function approveInvoice(rowNumber, source, candidate, client, btnEl) {
   if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Approving…'; }
   try {
-    const res = await fetch('/api/approve', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rowNumber, source, verify: { candidate, client } })
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
+    await pmtFetchJSON('/api/approve', { rowNumber, source, verify: { candidate, client } });
     if (btnEl) btnEl.textContent = '✓ Approved';
     setTimeout(() => forceReloadData && forceReloadData(), 500);
   } catch (e) {

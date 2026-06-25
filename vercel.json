@@ -5,6 +5,11 @@
   "functions": {
     "api/data.js": {
       "maxDuration": 30
-    }
+    },
+    "api/approve.js":  { "maxDuration": 20 },
+    "api/status.js":   { "maxDuration": 20 },
+    "api/category.js": { "maxDuration": 20 },
+    "api/comment.js":  { "maxDuration": 20 },
+    "api/note.js":     { "maxDuration": 20 }
   }
 }
