@@ -416,13 +416,14 @@ async function fetchBookkeepingData(sheets) {
     };
   }
   const rows = res.data.values || [];
-  const { coa, transactions } = parseBookkeepingRows(rows);
+  const { coa, transactions, labels } = parseBookkeepingRows(rows);
   const awaitingCount = transactions.filter(t => !t.cleared).length;
   const clarifiedCount = transactions.length - awaitingCount;
   return {
     tab,
     coa,
     transactions,
+    labels,   // actual sheet header text for date/vendor/description/amount/account
     meta: {
       total: transactions.length,
       awaitingCount,

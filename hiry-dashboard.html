@@ -2526,12 +2526,23 @@ function renderTransactionsMode(bk) {
   const thead = tbl.querySelector('thead');
   const tbody = tbl.querySelector('tbody');
 
-  const cols = ['Date','Description','Vendor','Amount','Account','Category','Comment'];
+  // Column headers show the ACTUAL sheet titles for the bookkeeper-owned
+  // columns (so a vendor column renamed "Question" displays as "Question").
+  // Category / Comment stay fixed — they're the client-action columns.
+  const L = (bk && bk.labels) || {};
+  const cols = [
+    { key: 'date',        label: L.date || 'Date' },
+    { key: 'description', label: L.description || 'Description' },
+    { key: 'vendor',      label: L.vendor || 'Vendor' },
+    { key: 'amount',      label: L.amount || 'Amount' },
+    { key: 'account',     label: L.account || 'Account' },
+    { key: 'category',    label: 'Category' },
+    { key: 'comment',     label: 'Comment' }
+  ];
   thead.innerHTML = '<tr style="border-bottom:1px solid var(--card-border)">' +
     cols.map(c => {
-      const num = (c === 'Amount');
-      const align = num ? 'right' : 'left';
-      return `<th style="text-align:${align};padding:10px 8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;white-space:nowrap">${c}</th>`;
+      const align = (c.key === 'amount') ? 'right' : 'left';
+      return `<th style="text-align:${align};padding:10px 8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;white-space:nowrap">${escapeHtml(c.label)}</th>`;
     }).join('') + '</tr>';
 
   const tx = bk.transactions || [];
