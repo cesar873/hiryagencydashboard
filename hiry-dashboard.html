@@ -433,6 +433,9 @@ tr:last-child td { border-bottom: none; }
     return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,'0')).join('');
   }
 
+  // Remember the unlock on THIS device using localStorage (persists across
+  // tabs/restarts) instead of sessionStorage (cleared when the tab closes).
+  // So each device only needs the password entered once.
   window.checkAuth = async function(e) {
     e.preventDefault();
     const v = document.getElementById('authPwd').value;
@@ -441,7 +444,7 @@ tr:last-child td { border-bottom: none; }
     try {
       const h = await sha256(v);
       if (h === PW_HASH) {
-        sessionStorage.setItem(KEY, h);
+        try { localStorage.setItem(KEY, h); } catch (_) {}
         document.getElementById('authGate').classList.add('hidden');
       } else {
         errEl.textContent = 'Incorrect password';
@@ -453,8 +456,19 @@ tr:last-child td { border-bottom: none; }
     return false;
   };
 
-  // Auto-unlock if already authed this session
-  if (sessionStorage.getItem(KEY) === PW_HASH) {
+  // Auto-unlock if this device has been authed before. Also honor the old
+  // sessionStorage key so anyone mid-session isn't bounced, and migrate them.
+  function isAuthed() {
+    try {
+      if (localStorage.getItem(KEY) === PW_HASH) return true;
+      if (sessionStorage.getItem(KEY) === PW_HASH) {
+        try { localStorage.setItem(KEY, PW_HASH); } catch (_) {}
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+  if (isAuthed()) {
     document.addEventListener('DOMContentLoaded', () => {
       const g = document.getElementById('authGate');
       if (g) g.classList.add('hidden');
