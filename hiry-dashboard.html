@@ -2965,7 +2965,7 @@ function positionPopover(popEl, anchorEl) {
 // column. So if you start using a new status value in the sheet, it shows
 // up here automatically without a frontend change — no more hardcoded
 // drop-down that drifts from the sheet.
-const PMT_STATUS_BASELINE = ['Client Review', 'AgenCFO Review', 'Open', 'Overdue', 'Paid'];
+const PMT_STATUS_BASELINE = ['Unreported', 'Client Review', 'AgenCFO Review', 'Open', 'Overdue', 'Paid'];
 function pmtGetStatusOptions() {
   const ordered = [...PMT_STATUS_BASELINE];
   const seen = new Set(PMT_STATUS_BASELINE.map(s => s.toLowerCase()));
