@@ -3032,6 +3032,30 @@ async function pmtFetchJSON(url, body, timeoutMs) {
   }
 }
 
+// ── Post-save refresh strategy (avoids Google Sheets read-quota blowouts) ──
+// Previously every save fired forceReloadData() — a full, cache-bypassing
+// re-read of the ENTIRE spreadsheet (~8+ Google read requests each). Filling
+// out several transactions in a row blew past Google's 60-reads/min/user
+// limit and saves started failing. Now we update the screen from what we just
+// wrote (no read) and only reconcile with the sheet on a debounced timer, so
+// a burst of edits collapses into a single background refresh.
+let _pmtReconcileTimer = null;
+function pmtScheduleReconcile(delayMs) {
+  clearTimeout(_pmtReconcileTimer);
+  _pmtReconcileTimer = setTimeout(() => { if (typeof forceReloadData === 'function') forceReloadData(); }, delayMs || 12000);
+}
+// Optimistically patch one Bookkeeping transaction locally + re-render.
+function pmtApplyTxnLocal(rowNumber, patch) {
+  const list = (typeof BOOKKEEPING !== 'undefined' && BOOKKEEPING && BOOKKEEPING.transactions) || [];
+  const tx = list.find(t => t.rowNumber === rowNumber);
+  if (!tx) return;
+  Object.assign(tx, patch);
+  tx.cleared = !!((tx.category && tx.category.trim()) || (tx.comment && tx.comment.trim()));
+  BOOKKEEPING.meta = BOOKKEEPING.meta || {};
+  BOOKKEEPING.meta.awaitingCount = list.filter(t => !t.cleared).length;
+  if (typeof renderPayments === 'function') renderPayments();
+}
+
 async function saveStatusFromPopover() {
   const s = pmtStatusPopState;
   if (!s || !s.selected) { closeStatusPopover(); return; }
@@ -3040,7 +3064,7 @@ async function saveStatusFromPopover() {
   try {
     await pmtFetchJSON('/api/status', { rowNumber: s.rowNumber, source: s.source, status: s.selected, verify: { candidate: s.candidate, client: s.client } });
     closeStatusPopover();
-    setTimeout(() => forceReloadData && forceReloadData(), 400);
+    pmtScheduleReconcile();
   } catch (e) {
     console.error('Status save failed:', e);
     alert('Status save failed: ' + e.message);
@@ -3082,10 +3106,13 @@ function filterCategoryOptions() {
 async function pickCategory(category) {
   const s = pmtCategoryPopState;
   if (!s) return;
+  const rowNumber = s.rowNumber;
   try {
-    await pmtFetchJSON('/api/category', { rowNumber: s.rowNumber, category, verify: { vendor: s.vendor, description: s.description } });
+    await pmtFetchJSON('/api/category', { rowNumber, category, verify: { vendor: s.vendor, description: s.description } });
     closeCategoryPopover();
-    setTimeout(() => forceReloadData && forceReloadData(), 400);
+    // Optimistic: reflect the write locally (no read), reconcile later.
+    pmtApplyTxnLocal(rowNumber, { category });
+    pmtScheduleReconcile();
   } catch (e) {
     console.error('Category save failed:', e);
     alert('Category save failed: ' + e.message);
@@ -3120,12 +3147,15 @@ async function saveCommentFromPopover() {
   if (!s) { closeCommentPopover(); return; }
   const ta = document.getElementById('pmtCommentText');
   const comment = ta ? ta.value : '';
+  const rowNumber = s.rowNumber;
   const btn = document.getElementById('pmtCommentSaveBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
-    await pmtFetchJSON('/api/comment', { rowNumber: s.rowNumber, comment, verify: { vendor: s.vendor, description: s.description } });
+    await pmtFetchJSON('/api/comment', { rowNumber, comment, verify: { vendor: s.vendor, description: s.description } });
     closeCommentPopover();
-    setTimeout(() => forceReloadData && forceReloadData(), 400);
+    // Optimistic: reflect the write locally (no read), reconcile later.
+    pmtApplyTxnLocal(rowNumber, { comment });
+    pmtScheduleReconcile();
   } catch (e) {
     console.error('Comment save failed:', e);
     alert('Comment save failed: ' + e.message);
@@ -3162,7 +3192,7 @@ async function saveNoteFromPopover() {
     await pmtFetchJSON('/api/note', { rowNumber: s.rowNumber, source: s.source, note, verify: { candidate: s.candidate, client: s.client } });
     pmtNotePopState = null;
     closeCommentPopover();
-    setTimeout(() => forceReloadData && forceReloadData(), 400);
+    pmtScheduleReconcile();
   } catch (e) {
     console.error('Note save failed:', e);
     alert('Note save failed: ' + e.message);
@@ -3271,7 +3301,7 @@ async function approveInvoice(rowNumber, source, candidate, client, btnEl) {
   try {
     await pmtFetchJSON('/api/approve', { rowNumber, source, verify: { candidate, client } });
     if (btnEl) btnEl.textContent = '✓ Approved';
-    setTimeout(() => forceReloadData && forceReloadData(), 500);
+    pmtScheduleReconcile();
   } catch (e) {
     console.error('Approve failed:', e);
     if (btnEl) { btnEl.disabled = false; btnEl.textContent = '✗ Retry'; btnEl.style.background = '#ef4444'; }
