@@ -506,6 +506,7 @@ tr:last-child td { border-bottom: none; }
   <button class="tab-btn" onclick="showTab(this,'revenue')">Revenue</button>
   <button class="tab-btn" onclick="showTab(this,'expenses')">Expenses</button>
   <button class="tab-btn" onclick="showTab(this,'payments')">Payments</button>
+  <button class="tab-btn" onclick="showTab(this,'planning')">Budgets, Goals &amp; Forecasting</button>
 </nav>
 
 <!-- ══════════════════════════════ REVENUE ══ -->
@@ -935,57 +936,6 @@ tr:last-child td { border-bottom: none; }
   </div>
 
   
-<!-- ─── Budget vs Actual ─── -->
-
-  <div class="panel gap">
-    <h2 id="budgetTitle">Budget vs Actual · —</h2>
-    <p class="sub" id="budgetSub">Single-month comparison · ordered Revenue → COGS → Expenses · use the Period filter above to switch months</p>
-    <div id="budgetMeta" style="margin-top:6px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.6px"></div>
-  </div>
-
-  <div class="kpi-grid gap">
-    <div class="kpi" id="budgetKpiRev"   style="border-top:3px solid var(--green)">
-      <div class="label">Revenue</div>
-      <div class="value" style="color:var(--blue)" id="bRevActual">—</div>
-      <div class="delta" id="bRevDelta">—</div>
-      <div style="color:var(--muted);font-size:11px;margin-top:4px" id="bRevBudget">vs budget —</div>
-    </div>
-    <div class="kpi" id="budgetKpiCogs"  style="border-top:3px solid var(--green)">
-      <div class="label">Cost of Sales</div>
-      <div class="value" id="bCogsActual">—</div>
-      <div class="delta" id="bCogsDelta">—</div>
-      <div style="color:var(--muted);font-size:11px;margin-top:4px" id="bCogsBudget">vs budget —</div>
-    </div>
-    <div class="kpi" id="budgetKpiOpex"  style="border-top:3px solid var(--green)">
-      <div class="label">Operating Expenses</div>
-      <div class="value" id="bOpexActual">—</div>
-      <div class="delta" id="bOpexDelta">—</div>
-      <div style="color:var(--muted);font-size:11px;margin-top:4px" id="bOpexBudget">vs budget —</div>
-    </div>
-    <div class="kpi" id="budgetKpiNet"   style="border-top:3px solid var(--green)">
-      <div class="label">Net Income</div>
-      <div class="value" style="color:var(--blue)" id="bNetActual">—</div>
-      <div class="delta" id="bNetDelta">—</div>
-      <div style="color:var(--muted);font-size:11px;margin-top:4px" id="bNetBudget">vs budget —</div>
-    </div>
-  </div>
-
-  <div class="panel gap" style="padding:0;overflow:hidden">
-    <table id="budgetTbl" style="width:100%;border-collapse:collapse">
-      <thead>
-        <tr style="border-bottom:1px solid var(--card-border)">
-          <th style="text-align:left;padding:14px 20px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Category</th>
-          <th class="num" style="padding:14px 20px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Budget</th>
-          <th class="num" style="padding:14px 20px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Actual</th>
-          <th class="num" style="padding:14px 20px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Variance $</th>
-          <th class="num" style="padding:14px 20px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Variance %</th>
-          <th style="padding:14px 20px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;width:240px">Progress</th>
-        </tr>
-      </thead>
-      <tbody id="budgetTbody"><tr><td colspan="6" style="padding:60px;text-align:center;color:var(--muted)">Loading…</td></tr></tbody>
-    </table>
-  </div>
-
 </div>
 
 
@@ -1142,6 +1092,80 @@ tr:last-child td { border-bottom: none; }
 
 </div>
 
+<!-- ══════════════════════════════ BUDGETS, GOALS & FORECASTING ══ -->
+<div id="planning" class="page">
+
+  <!-- ─── 2026 Goals ─── -->
+  <div class="panel gap">
+    <h2>2026 Goals</h2>
+    <p class="sub" id="goalsSub">Annual targets from the 2026 Planning tab · progress vs deadline pace</p>
+  </div>
+  <div id="goalsGrid" class="grid-2 gap">
+    <div class="panel" style="text-align:center;color:var(--muted);padding:60px">Loading goals…</div>
+  </div>
+
+  <!-- ─── Budget vs Actual ─── -->
+  <div class="panel gap">
+    <h2 id="budgetTitle">Budget vs Actual · —</h2>
+    <p class="sub" id="budgetSub">Single-month comparison · ordered Revenue → COGS → Expenses · use the Period filter above to switch months</p>
+    <div id="budgetMeta" style="margin-top:6px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.6px"></div>
+  </div>
+
+  <div class="kpi-grid gap">
+    <div class="kpi" id="budgetKpiRev"   style="border-top:3px solid var(--green)">
+      <div class="label">Revenue</div>
+      <div class="value" style="color:var(--blue)" id="bRevActual">—</div>
+      <div class="delta" id="bRevDelta">—</div>
+      <div style="color:var(--muted);font-size:11px;margin-top:4px" id="bRevBudget">vs budget —</div>
+    </div>
+    <div class="kpi" id="budgetKpiCogs"  style="border-top:3px solid var(--green)">
+      <div class="label">Cost of Sales</div>
+      <div class="value" id="bCogsActual">—</div>
+      <div class="delta" id="bCogsDelta">—</div>
+      <div style="color:var(--muted);font-size:11px;margin-top:4px" id="bCogsBudget">vs budget —</div>
+    </div>
+    <div class="kpi" id="budgetKpiOpex"  style="border-top:3px solid var(--green)">
+      <div class="label">Operating Expenses</div>
+      <div class="value" id="bOpexActual">—</div>
+      <div class="delta" id="bOpexDelta">—</div>
+      <div style="color:var(--muted);font-size:11px;margin-top:4px" id="bOpexBudget">vs budget —</div>
+    </div>
+    <div class="kpi" id="budgetKpiNet"   style="border-top:3px solid var(--green)">
+      <div class="label">Net Income</div>
+      <div class="value" style="color:var(--blue)" id="bNetActual">—</div>
+      <div class="delta" id="bNetDelta">—</div>
+      <div style="color:var(--muted);font-size:11px;margin-top:4px" id="bNetBudget">vs budget —</div>
+    </div>
+  </div>
+
+  <div class="panel gap" style="padding:0;overflow:hidden">
+    <table id="budgetTbl" style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="border-bottom:1px solid var(--card-border)">
+          <th style="text-align:left;padding:14px 20px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Category</th>
+          <th class="num" style="padding:14px 20px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Budget</th>
+          <th class="num" style="padding:14px 20px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Actual</th>
+          <th class="num" style="padding:14px 20px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Variance $</th>
+          <th class="num" style="padding:14px 20px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px">Variance %</th>
+          <th style="padding:14px 20px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;width:240px">Progress</th>
+        </tr>
+      </thead>
+      <tbody id="budgetTbody"><tr><td colspan="6" style="padding:60px;text-align:center;color:var(--muted)">Loading…</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- ─── Forecasting ─── -->
+  <div class="panel gap">
+    <h2>Forecasting</h2>
+    <p class="sub">Projections and scenario planning</p>
+    <div style="padding:44px 24px;text-align:center;border:1px dashed var(--card-border);border-radius:10px;margin-top:8px">
+      <div style="font-family:'Anton',sans-serif;font-size:16px;letter-spacing:1.5px;color:var(--text);margin-bottom:8px">COMING SOON</div>
+      <div style="font-size:13px;max-width:520px;margin:0 auto;line-height:1.6;color:var(--muted)">Forecasting will live here. Send over how you'd like it built — revenue/expense projections, run-rate to goal, scenario toggles — and I'll wire it in.</div>
+    </div>
+  </div>
+
+</div>
+
 <!-- ──────────────── Popovers (fixed-position, hidden by default) ──────────────── -->
 
 <!-- Status change popover -->
@@ -1239,6 +1263,7 @@ let cogs = [], opex = [];
 let cogsTalent = [], cogsCSM = [], cogsInt = [], cogsFreel = [], cogsRef = [];
 let opexSoftware = [], opexRecruit = [], opexStripe = [], opexAds = [], opexTravel = [], opexOther = [];
 let BUDGET = { months: [], byMonth: {}, meta: {} };
+let PLANNING = { goals: [], meta: {} };
 let RECEIVABLES = { invoices: [], totals: {}, meta: {} };
 let BOOKKEEPING = { coa: [], transactions: [], meta: { awaitingCount: 0 } };
 let isForecast = []; // per-month boolean — true = forecast/projection, false = actuals
@@ -1914,6 +1939,101 @@ function renderBudget() {
   tbody.innerHTML = html || '<tr><td colspan="6" style="padding:40px;text-align:center;color:var(--muted)">No line items for this month</td></tr>';
 }
 
+// ── 2026 Goals renderer (progress rings) ───────────────────────
+// Each goal from the Planning tab renders as a circular progress ring
+// (fill = % of target) with a pace marker showing where we "should" be,
+// assuming the goal runs Jan 1 → end of the deadline month.
+function renderPlanning() {
+  const grid = document.getElementById('goalsGrid');
+  if (!grid) return;
+  const goals = (PLANNING && PLANNING.goals) || [];
+  const sub = document.getElementById('goalsSub');
+  if (sub && PLANNING && PLANNING.tab) {
+    sub.textContent = 'Annual targets from the “' + PLANNING.tab + '” tab · fill = progress · white marker = expected pace';
+  }
+  if (!goals.length) {
+    grid.innerHTML = '<div class="panel" style="text-align:center;color:var(--muted);padding:50px">No goals found. Add rows under <b style="color:var(--text)">Key Goal / Deadline / Progress</b> in the <b style="color:var(--text)">2026 Planning</b> tab.</div>';
+    return;
+  }
+
+  const R = 52, C = 2 * Math.PI * R;
+  const MON = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  const fmtBig = v => {
+    const a = Math.abs(v);
+    if (a >= 1e6) return '$' + (v / 1e6).toFixed(2).replace(/\.?0+$/, '') + 'M';
+    if (a >= 1e3) return '$' + Math.round(v / 1e3) + 'K';
+    return '$' + Math.round(v).toLocaleString();
+  };
+
+  grid.innerHTML = goals.map(g => {
+    const prog = Math.max(0, +g.progress || 0);
+    const progClamped = Math.min(100, prog);
+    const arc = C * progClamped / 100;
+    const current = (+g.target || 0) * prog / 100;
+
+    // Expected pace from the deadline (assume Jan 1 of that year → end of month)
+    let pace = null;
+    const pm = String(g.deadline || '').match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{4})/i);
+    if (pm) {
+      const mIdx = MON.indexOf(pm[1].slice(0, 3).toLowerCase());
+      const yr = parseInt(pm[2], 10);
+      const start = new Date(yr, 0, 1);
+      const end = new Date(yr, mIdx + 1, 0, 23, 59, 59);
+      const now = new Date();
+      pace = Math.max(0, Math.min(100, (now - start) / (end - start) * 100));
+    }
+
+    const diff = pace == null ? null : (prog - pace);
+    const ringColor = diff == null ? 'var(--blue)'
+      : diff >= 0 ? 'var(--green)'
+      : diff >= -12 ? 'var(--amber)' : 'var(--red)';
+
+    let paceMarker = '', paceBadge = '';
+    if (pace != null) {
+      const ang = (-90 + 3.6 * Math.min(100, pace)) * Math.PI / 180;
+      const mx = 60 + R * Math.cos(ang);
+      const my = 60 + R * Math.sin(ang);
+      paceMarker = '<circle cx="' + mx.toFixed(1) + '" cy="' + my.toFixed(1) + '" r="4.5" fill="#fff" stroke="#04121f" stroke-width="1.5"/>';
+      const badgeCls = diff >= 0 ? 'active' : (diff >= -12 ? 'warn' : 'lost');
+      const arrow = diff >= 0 ? '▲ ' : '▼ ';
+      paceBadge = '<span class="pill ' + badgeCls + '">' + arrow + Math.abs(diff).toFixed(0) + 'pt ' + (diff >= 0 ? 'ahead of pace' : 'behind pace') + '</span>';
+    }
+
+    const st = String(g.status || '');
+    const statusCls = /complete|done|achiev|hit/i.test(st) ? 'active'
+      : /behind|risk|off.?track|miss/i.test(st) ? 'lost'
+      : /progress|track|active|on.?go/i.test(st) ? 'info' : 'wo';
+
+    return '' +
+      '<div class="panel" style="display:flex;gap:22px;align-items:center">' +
+        '<div style="position:relative;width:132px;height:132px;flex-shrink:0">' +
+          '<svg viewBox="0 0 120 120" width="132" height="132">' +
+            '<circle cx="60" cy="60" r="' + R + '" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="12"/>' +
+            '<circle cx="60" cy="60" r="' + R + '" fill="none" stroke="' + ringColor + '" stroke-width="12" stroke-linecap="round" stroke-dasharray="' + arc.toFixed(1) + ' ' + (C - arc).toFixed(1) + '" transform="rotate(-90 60 60)"/>' +
+            paceMarker +
+          '</svg>' +
+          '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">' +
+            '<div style="font-family:\'Anton\',sans-serif;font-size:26px;line-height:1;color:' + ringColor + '">' + prog.toFixed(1) + '%</div>' +
+            '<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-top:2px">of goal</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-family:\'Anton\',sans-serif;font-size:22px;letter-spacing:0.5px">' + escapeHtml(g.metric || g.goal) + '</div>' +
+          '<div style="margin-top:4px;font-size:14px"><span style="color:var(--blue);font-weight:700">' + fmtBig(current) + '</span> <span style="color:var(--muted)">of ' + fmtBig(+g.target || 0) + '</span></div>' +
+          '<div style="display:flex;gap:26px;margin-top:12px">' +
+            '<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px">Deadline</div><div style="font-size:13px;margin-top:2px">' + escapeHtml(g.deadline || '—') + '</div></div>' +
+            '<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px">Owner</div><div style="font-size:13px;margin-top:2px">' + escapeHtml(g.owner || '—') + '</div></div>' +
+          '</div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">' +
+            (g.status ? '<span class="pill ' + statusCls + '">' + escapeHtml(g.status) + '</span>' : '') +
+            paceBadge +
+          '</div>' +
+          (g.notes ? '<div style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5">' + escapeHtml(g.notes) + '</div>' : '') +
+        '</div>' +
+      '</div>';
+  }).join('');
+}
+
 
 async function forceReloadData() {
   const btn = event && event.target;
@@ -2000,6 +2120,7 @@ function applyData(D) {
   REV_TXNS = D.REV_TXNS || [];
   EXP_TXNS = D.EXP_TXNS || [];
   BUDGET = D.budget || { months: [], byMonth: {}, meta: {} };
+  PLANNING = D.planning || { goals: [], meta: {} };
   RECEIVABLES = D.receivables || { invoices: [], totals: {}, meta: {} };
   BOOKKEEPING = D.bookkeeping || { coa: [], transactions: [], meta: { awaitingCount: 0 } };
 
@@ -2024,6 +2145,7 @@ function applyData(D) {
   rebuildStaticKPIs();
   renderPayments();
   renderPLTable();
+  renderPlanning();
 }
 
 // ── P&L by Month dynamic renderer (with forecast styling) ──────

@@ -207,6 +207,79 @@ async function fetchBudgetData(sheets, sheetId, tabs) {
   };
 }
 
+// ── 2026 Planning tab reader (Key Goals) ────────────────────────
+// Reads the "2026 Planning" tab and pulls the annual Key Goal table
+// (Key Goal / Deadline / Owner / Progress / Status / Notes). Returns one
+// entry per goal with the parsed dollar target and progress as 0–100.
+async function fetchPlanningData(sheets, sheetId, tabs) {
+  const planningTab = tabs.find(t => /planning/i.test(t));
+  if (!planningTab) return { tab: null, goals: [], meta: { error: 'No Planning tab found' } };
+
+  let res;
+  try {
+    res = await sheets.spreadsheets.values.get({
+      spreadsheetId: sheetId,
+      range: `'${planningTab}'!A1:Z60`,
+      valueRenderOption: 'FORMATTED_VALUE'
+    });
+  } catch (e) {
+    return { tab: planningTab, goals: [], meta: { error: 'Planning read failed: ' + e.message } };
+  }
+  const rows = res.data.values || [];
+
+  // Locate the Key Goal header row (needs Key Goal + Deadline + Progress)
+  let headerIdx = -1, cols = {};
+  for (let i = 0; i < Math.min(rows.length, 40); i++) {
+    const lower = (rows[i] || []).map(c => String(c || '').trim().toLowerCase());
+    const goalCol = lower.findIndex(c => c === 'key goal' || c === 'goal');
+    const deadlineCol = lower.indexOf('deadline');
+    const progressCol = lower.indexOf('progress');
+    if (goalCol >= 0 && deadlineCol >= 0 && progressCol >= 0) {
+      headerIdx = i;
+      cols = {
+        goal: goalCol, deadline: deadlineCol, progress: progressCol,
+        owner: lower.indexOf('owner'), status: lower.indexOf('status'), notes: lower.indexOf('notes')
+      };
+      break;
+    }
+  }
+  if (headerIdx < 0) {
+    return { tab: planningTab, goals: [], meta: { error: 'Key Goal header row not found' } };
+  }
+
+  // Percent parser: "53.81%" → 53.81; a bare fraction (0–1) → ×100
+  function pct(v) {
+    const s = String(v || '').trim();
+    let n = num(s);
+    if (!s.includes('%') && n > 0 && n <= 1) n = n * 100;
+    return n;
+  }
+
+  const goals = [];
+  let blanks = 0;
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const row = rows[i] || [];
+    const goalRaw = String(row[cols.goal] || '').trim();
+    if (!goalRaw) { if (++blanks >= 3) break; continue; }
+    blanks = 0;
+    const metric = /profit/i.test(goalRaw) ? 'Profit'
+      : /revenue/i.test(goalRaw) ? 'Revenue'
+      : goalRaw.replace(/[\d.,$]/g, '').replace(/\busd\b/i, '').trim() || goalRaw;
+    goals.push({
+      goal: goalRaw,
+      target: num(goalRaw),
+      metric,
+      deadline: cols.deadline >= 0 ? String(row[cols.deadline] || '').trim() : '',
+      owner:    cols.owner    >= 0 ? String(row[cols.owner]    || '').trim() : '',
+      progress: cols.progress >= 0 ? pct(row[cols.progress]) : 0,
+      status:   cols.status   >= 0 ? String(row[cols.status]   || '').trim() : '',
+      notes:    cols.notes    >= 0 ? String(row[cols.notes]    || '').trim() : ''
+    });
+  }
+
+  return { tab: planningTab, goals, meta: { tab: planningTab, goalCount: goals.length } };
+}
+
 // ── Invoicing tab reader ────────────────────────────────────────
 // Reads one Invoicing tab. `tab` is the sheet/tab name; `forcedSource` is
 // 'candidate' | 'client' when reading a split tab (the row's source then
@@ -925,6 +998,9 @@ async function fetchSheetData() {
   // ── Budget tab read ──────────────────────────────────────────
   const budget = await fetchBudgetData(sheets, SHEET_ID, tabs);
 
+  // ── 2026 Planning tab read (annual goals) ────────────────────
+  const planning = await fetchPlanningData(sheets, SHEET_ID, tabs);
+
   // ── Invoicing + Bookkeeping tab read (Payments tab data) ─────
   // Invoicing is split into two tabs — read both and merge. Each invoice
   // carries source = 'candidate' | 'client' (from its tab) so writes route
@@ -985,6 +1061,7 @@ async function fetchSheetData() {
     REV_TXNS,
     EXP_TXNS,
     budget,
+    planning,
     receivables,
     bookkeeping,
     accrual,
@@ -999,6 +1076,7 @@ async function fetchSheetData() {
       revenueEntities: MOM_DATA.revenue.length,
       expenseEntities: MOM_DATA.expenses.length,
       budget: budget.meta,
+      planning: planning.meta,
       receivables: receivables.meta,
       bookkeeping: bookkeeping.meta,
       invoicingTabs: receivables.tabs,
